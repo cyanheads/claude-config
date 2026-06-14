@@ -5,7 +5,8 @@
 #
 # Installs the Claude Code CLI and the Bun runtime (if missing), then writes
 # settings.json, CLAUDE.md, and skills into a DEDICATED config dir
-# (~/.claude-cyanheads) and drops a `claude-cyanheads` launcher on your PATH.
+# (~/.claude-cyanheads), drops a `claude-cyanheads` launcher on your PATH, and
+# registers the cyanheads discovery MCP server in that profile.
 # Your existing ~/.claude is never touched. Personal hooks, secrets, and
 # machine-specific paths are intentionally excluded.
 #
@@ -17,6 +18,7 @@ REPO="cyanheads/claude-config"
 CONFIG_DIR="${HOME}/.claude-cyanheads"
 BIN_DIR="${HOME}/.local/bin"
 LAUNCHER="${BIN_DIR}/claude-cyanheads"
+MCP_URL="https://cyanheads.caseyjhand.com/mcp"
 TARBALL="https://github.com/${REPO}/archive/refs/heads/main.tar.gz"
 
 # --- preflight ---------------------------------------------------------------
@@ -80,6 +82,19 @@ exec env CLAUDE_CONFIG_DIR="${HOME}/.claude-cyanheads" claude "$@"
 LAUNCH
 chmod +x "${LAUNCHER}"
 echo "    wrote ${LAUNCHER}"
+
+# --- register the cyanheads discovery MCP server -----------------------------
+echo "==> Registering the cyanheads discovery MCP server (fleet search)"
+if command -v claude >/dev/null 2>&1; then
+  CLAUDE_CONFIG_DIR="${CONFIG_DIR}" claude mcp remove cyanheads -s user >/dev/null 2>&1 || true
+  if CLAUDE_CONFIG_DIR="${CONFIG_DIR}" claude mcp add -t http cyanheads "${MCP_URL}" -s user >/dev/null 2>&1; then
+    echo "    registered: cyanheads -> ${MCP_URL}"
+  else
+    echo "    WARN: skipped — add later: claude mcp add -t http cyanheads ${MCP_URL}"
+  fi
+else
+  echo "    skipped (claude CLI not available)"
+fi
 
 # --- report existing global config (untouched) -------------------------------
 if [ -e "${HOME}/.claude/CLAUDE.md" ] || [ -e "${HOME}/.claude/settings.json" ]; then

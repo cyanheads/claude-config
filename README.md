@@ -17,6 +17,7 @@ sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/ma
 - Installs the Claude Code CLI if it isn't already present (it self-updates afterward).
 - Installs the [Bun](https://bun.sh) runtime if it isn't present — the toolchain these settings and skills assume.
 - Writes `settings.json`, `CLAUDE.md`, and `skills/` into a dedicated **`~/.claude-cyanheads/`** profile — your existing `~/.claude` is never touched — and drops a **`claude-cyanheads`** launcher on your PATH.
+- Registers the **cyanheads** discovery MCP server (`cyanheads.caseyjhand.com/mcp`) in that profile — search the MCP fleet and pull install snippets from inside Claude, no key required.
 
 ## What's here
 
