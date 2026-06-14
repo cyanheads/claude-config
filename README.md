@@ -15,6 +15,7 @@ sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/ma
 ## What it does
 
 - Installs the Claude Code CLI if it isn't already present (it self-updates afterward).
+- Installs the [Bun](https://bun.sh) runtime if it isn't present — the toolchain these settings and skills assume.
 - Writes `settings.json`, `CLAUDE.md`, and `skills/` into `~/.claude/`, backing up anything already there.
 
 ## What's here
@@ -24,6 +25,7 @@ sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/ma
 | `settings.json` | Claude Code settings — model, output limits, editor/notification preferences, auto permission mode. |
 | `CLAUDE.md` | Global system prompt: engineering philosophy, response style, code conventions. |
 | `skills/` | General-purpose skills — code cleanup, context handoff, `gh` workflows, web→Markdown, writing cleanup. |
+| `orchestrator/CLAUDE.md` | A workspace-tier doctrine **template** for running multi-agent (orchestrator → worker) work — copy it to a workspace root and fill the `<…>` slots. *Not* installed into `~/.claude` (a workspace prompt only takes effect at a workspace/project root). |
 
 ## After installing
 

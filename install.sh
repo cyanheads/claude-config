@@ -3,9 +3,10 @@
 # install.sh — set up Claude Code with cyanheads' public config on any machine.
 # No GitHub authentication required.
 #
-# Installs the Claude Code CLI (if missing) and writes settings.json, CLAUDE.md,
-# and skills into ~/.claude, backing up anything already there. Personal hooks,
-# secrets, and machine-specific paths are intentionally excluded.
+# Installs the Claude Code CLI and the Bun runtime (if missing), then writes
+# settings.json, CLAUDE.md, and skills into ~/.claude, backing up anything
+# already there. Personal hooks, secrets, and machine-specific paths are
+# intentionally excluded.
 #
 #   sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/main/install.sh)"
 #
@@ -22,6 +23,15 @@ else
   echo "    installing..."
   curl -fsSL https://claude.ai/install.sh | bash \
     || echo "    WARN: install failed — retry later: curl -fsSL https://claude.ai/install.sh | bash"
+fi
+
+echo "==> Bun runtime (assumed by this config's workflows)"
+if command -v bun >/dev/null 2>&1; then
+  echo "    present: $(bun --version)"
+else
+  echo "    installing..."
+  curl -fsSL https://bun.sh/install | bash \
+    || echo "    WARN: install failed — retry later: curl -fsSL https://bun.sh/install | bash"
 fi
 
 echo "==> Fetching config from ${REPO}"
