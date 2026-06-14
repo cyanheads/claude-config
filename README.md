@@ -25,7 +25,7 @@ sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/ma
 | `settings.json` | Claude Code settings — model, output limits, editor/notification preferences, auto permission mode. |
 | `CLAUDE.md` | Global system prompt: engineering philosophy, response style, code conventions. |
 | `skills/` | General-purpose skills — code cleanup, context handoff, `gh` workflows, web→Markdown, writing cleanup. |
-| `orchestrator/CLAUDE.md` | A workspace-tier doctrine **template** for running multi-agent (orchestrator → worker) work — copy it to a workspace root and fill the `<…>` slots. *Not* installed into `~/.claude` (a workspace prompt only takes effect at a workspace/project root). |
+| `orchestrator/` | A workspace-tier doctrine **template** for running multi-agent (orchestrator → worker) work. Point an agent at `orchestrator/BOOTSTRAP.md` — it internalizes the orchestrator doctrine, surveys your environment, and rewrites `orchestrator/CLAUDE.md` filled in. *Not* installed into `~/.claude` (a workspace prompt only takes effect at a workspace/project root). |
 
 ## After installing
 
