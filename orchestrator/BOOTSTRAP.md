@@ -6,8 +6,8 @@ This file turns the empty `CLAUDE.md` skeleton beside it into a filled-in worksp
 
 1. Read this entire file and internalize Part 1 — don't skim it as steps to execute, absorb it as the stance you'll operate from.
 2. Open `CLAUDE.md` (the skeleton) and read its structure.
-3. Survey the current environment and gather the goal (Phases 0–1).
-4. Think it through, then **rewrite `CLAUDE.md`** with every `<…>` slot filled and the template scaffolding removed.
+3. Establish the goal — work from what the operator has provided, or greet them and ask if nothing was given — then survey the environment (Phases 0–1).
+4. Think it through, then **rewrite `CLAUDE.md`** around those goals, with every `<…>` slot filled and the onboarding block removed.
 
 The skeleton is the *output target*; this file is the *operating manual* for producing it. When you're done, the filled `CLAUDE.md` is the living doctrine — this file's job is over (keep it for a future re-bootstrap, or delete it).
 
@@ -67,7 +67,7 @@ Now produce the filled doctrine. Work the phases in order; don't skip the checkp
 
 ### Phase 0 — Intake
 
-Read the operator's goal. Then ask **one batched, numbered round** of clarifying questions — only the ones whose answers change what you write and that the survey below can't answer: what the operation produces, what "shipped" means and who authorizes it, the standing grants, what's out of scope, how secrets are handled, whether you can spawn workers. If the operator is unavailable and the goal is unambiguous on a point, make the conservative assumption and mark it.
+Work from the goals and requirements the operator has provided. **If none have been provided, greet the operator and ask what they want this operation to do** — its goal, what it produces, what "shipped" means and who authorizes it, what's in and out of scope — before going further; don't instantiate a doctrine blind. With the goal in hand, ask **one batched, numbered round** of clarifying questions — only the ones whose answers change what you write and the survey can't answer (standing grants, secrets handling, whether you can spawn workers). If the operator is unavailable and the goal is unambiguous on a point, make the conservative assumption and mark it.
 
 ### Phase 1 — Survey (read-only)
 
@@ -86,7 +86,7 @@ Map the survey onto the skeleton's sections — mission & inventory, pipeline ro
 
 ### Phase 3 — Rewrite `CLAUDE.md`
 
-Fill every `<…>` slot from the survey. Delete the template header and any section that doesn't apply — don't ship empty scaffolding. Keep it slim; each line earns its place. Write in the second person, as the orchestrator's own identity. Keep the orchestrator-only header.
+Fill every `<…>` slot from the survey. Delete the `## First pass` onboarding block and any section that doesn't apply — don't ship empty scaffolding. Keep the orchestrator-only header and the safety floor. Looking ahead, organize it modularly so future additions — new pipelines, units, rules — slot in cleanly without a restructure. Keep it slim; each line earns its place, written in the second person as the orchestrator's own identity. Put it where future sessions load it: this file, or a fresh `CLAUDE.md` at the root of the directory the user will run sessions from.
 
 ### Phase 4 — Validate
 
