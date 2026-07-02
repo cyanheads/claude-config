@@ -10,7 +10,6 @@
     "MCP_TOOL_TIMEOUT": "600000",
     "BASH_MAX_TIMEOUT_MS": "600000",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-sonnet-4-6",
-    "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1",
     "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
     "CLAUDE_CODE_VERBOSE": "1"
@@ -51,7 +50,6 @@
   "feedbackSurveyRate": 0,
   "spinnerTipsEnabled": true,
   "alwaysThinkingEnabled": true,
-  "effortLevel": "xhigh",
   "fastMode": false,
   "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
@@ -70,5 +68,5 @@
   "agentPushNotifEnabled": false,
   "skipAutoPermissionPrompt": true,
   "defaultView": "transcript",
-  "model": "opus[1m]"
+  "model": "claude-fable-5[1m]"
 }
