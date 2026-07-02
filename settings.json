@@ -51,6 +51,7 @@
   "spinnerTipsEnabled": true,
   "alwaysThinkingEnabled": true,
   "fastMode": false,
+  "switchModelsOnFlag": false,
   "awaySummaryEnabled": false,
   "autoUpdatesChannel": "latest",
   "prefersReducedMotion": false,
