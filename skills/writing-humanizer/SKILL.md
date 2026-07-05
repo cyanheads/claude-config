@@ -333,6 +333,8 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 **After:**
 > The French Revolution began in 1789 when financial crisis and food shortages led to widespread unrest.
 
+**Email register (the outbound-correspondence variant):** in email the same reflex shows up as boilerplate openers and closers — "I hope this email finds you well," "I wanted to reach out," "I trust this message finds you well," "Please don't hesitate to reach out," "Looking forward to hearing from you." Open on the actual reason for writing, not throat-clearing; close with a plain, specific line, not a template. Warmth itself isn't the tell: a real greeting and a genuine thanks are human; the boilerplate is what to cut.
+
 ---
 
 ### 20. Knowledge-Cutoff Disclaimers
