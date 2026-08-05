@@ -51,10 +51,13 @@
   "feedbackSurveyRate": 0,
   "spinnerTipsEnabled": true,
   "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
   "fastMode": false,
   "switchModelsOnFlag": false,
   "awaySummaryEnabled": false,
+  "askUserQuestionTimeout": "never",
   "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
   "prefersReducedMotion": false,
   "showThinkingSummaries": true,
   "skipWorkflowUsageWarning": true,
@@ -67,8 +70,8 @@
   "teammateMode": "auto",
   "remoteControlAtStartup": true,
   "isolatePeerMachines": true,
+  "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": false,
   "skipAutoPermissionPrompt": true,
-  "defaultView": "transcript",
-  "model": "claude-fable-5[1m]"
+  "defaultView": "transcript"
 }
