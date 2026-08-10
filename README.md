@@ -36,4 +36,4 @@ Run **`claude-cyanheads`** to start Claude Code with this config — an isolated
 - Export any API keys/secrets your workflow needs.
 - Want it everywhere? Add `export CLAUDE_CONFIG_DIR="$HOME/.claude-cyanheads"` to your shell rc and plain `claude` uses it too.
 
-Personal automation hooks and machine-specific config are intentionally left out — this is the portable, shareable core.
+Personal automation hooks and machine-specific config are intentionally left out — this is the portable, shareable core. `CLAUDE.md` is curated on the same principle: private operational sections are dropped, and rules that name my own accounts and repos are written generically here, so they describe your setup rather than mine.
