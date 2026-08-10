@@ -135,7 +135,7 @@ After every run: update <run log>, append papercuts, trace each lesson to the fi
 
 Specific to the Claude Code harness — drop this section if you orchestrate elsewhere.
 
-- **Within-repo parallelism collides on whole-project gates** (build, tests, lint). Prefer one worker per repo and serialize or split across repos; reach for git-worktree isolation (`isolation: worktree`) only where your environment actually supports it.
+- **Within-repo parallelism collides on whole-project gates** (build, tests, lint) and on the same files. One worker per repo; serialize within a repo and split across repos to get concurrency. Don't route around this with a working-copy isolation mechanism — assume the environment has none unless you've confirmed otherwise, and note that the worker prompt template below already bans it.
 - **Model tiers:** workers spawned *directly* by the main session (Agent tool) inherit your session model — the best available; Workflow-tool children, and any nested sub-agent, silently run a smaller model regardless of the requested tier. For top-model work, spawn workers directly and manage concurrency yourself; reserve the Workflow tool for work a smaller model handles well. Verify the model in the agent UI, never by scanning a transcript (auxiliary title/summary calls run the smaller model and misread as "this worker is small").
 - **Workflow `args`** can arrive JSON-stringified despite the "pass JSON" guidance — guard at line one (`const x = typeof args === 'string' ? JSON.parse(args) : args`) or `.map`/`.filter`/`.length` throws and the run dies before any worker spawns.
 
