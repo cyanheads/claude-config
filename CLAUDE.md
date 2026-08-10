@@ -177,7 +177,7 @@
   </code_philosophy>
 
   <git_workflow>
-    <rule>Use Bash `git` for git operations. For commit/wrap-up/release work, follow the `git-wrapup` skill from mcp-ts-core (`skills/git-wrapup/SKILL.md`); adapt when the project isn't an MCP server.</rule>
+    <rule>Use Bash `git` for git operations. For commit/wrap-up/release work, follow the project's own `git-wrapup` skill (`skills/git-wrapup/SKILL.md`, or under `.claude/skills/`) when it has one — it names that project's real gates, version files, and release surface. When a project carries none, use the global `git-wrapup` skill, which holds the standards that apply everywhere.</rule>
     <rule>NEVER commit unless the user explicitly requests it. Explicit means a direct request to commit (e.g. "commit this", "commit and push", "make a commit") or invocation of a git wrapup workflow. Phrases like "get to work", "fix this up", "make the changes", "ship it", "apply your recommendations" are NOT commit requests — they ask for the work, not the commit. Default end state for any task is staged-or-unstaged working tree, handed back for review. The user decides when work becomes a commit.</rule>
     <rule>NEVER use `git stash` — not for quick checks, not for testing, not for any reason. It silently moves uncommitted work and risks data loss. Use `git show`, `git diff`, or other read-only approaches instead.</rule>
     <rule>NEVER use git worktrees — not `git worktree` via shell, not the Agent/Workflow `isolation: "worktree"` flag, not the `git_worktree` MCP tool, not the `EnterWorktree`/`ExitWorktree` harness tools. They aren't configured in these environments and aren't permitted. When work needs isolation, serialize it or split across separate repos — don't reach for a worktree.</rule>
