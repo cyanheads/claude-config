@@ -7,7 +7,7 @@ description: >
   own release flow says push is the release.
 metadata:
   author: cyanheads
-  version: "1.0"
+  version: "1.1"
   type: workflow
 ---
 
@@ -15,7 +15,7 @@ metadata:
 
 A project's own `git-wrapup` (`skills/git-wrapup/SKILL.md`, or under `.claude/skills/` / `.agents/skills/`) outranks this one and is followed instead: it names the real gate commands, the version-declaring files, and whether push is part of the release. Look for one before using this.
 
-This skill is the fallback — the standards that hold in every repo, with no project-specific machinery assumed. Anything a framework adds (changelog directories, registry publishes, container images) lives in that framework's own skill, never here.
+This skill is the fallback — the standards that hold in every repo, with no project-specific machinery assumed. Anything a framework adds (registry publishes, container images, bundle artifacts) lives in that framework's own skill, never here.
 
 ## Before anything: was a commit actually requested?
 
@@ -88,6 +88,8 @@ Skip this entire step for content repos, config repos, and anything with no vers
 
 The bump magnitude is the user's to set — apply a documented floor when one exists, otherwise surface the choice rather than picking. Update every file that declares a version (`package.json` at minimum; also any README badge, manifest, or doc that pins one), then grep the old version string to catch stragglers — historical changelog entries are correct as-is, everything else should match.
 
+**Changelog.** A project with a `changelog/` directory of per-version files keeps its source of truth there: author `changelog/<major.minor>.x/<version>.md` — frontmatter `summary` (≤350 chars, quoted, single line) plus `breaking` / `security` flags — then regenerate the rollup with the project's `changelog:build` script. `CHANGELOG.md` is generated; never hand-edit it. Format reference: `changelog/template.md` in the project, or the `new-project` skill's `references/changelog.md`. A project with a single hand-maintained `CHANGELOG.md` gets a new dated version section at the top, same section order (Added, Changed, Deprecated, Removed, Fixed, Security), same one-sentence-per-bullet discipline.
+
 Version bump, changelog entry, and regenerated artifacts land in a **single release commit on top of the work stack** — never mixed into a feature commit. Its subject leads with the version: `chore(release): 0.4.2 — <theme>`.
 
 Exception: for a small release that is one cohesive change, the version files may ride with the work in one commit whose subject leads with the version. The failure to avoid is the inverse — a multi-concern diff collapsed into one release commit.
@@ -133,7 +135,7 @@ Push as part of this flow only when the project's own rules say push is the rele
 - [ ] Project gates run raw and green
 - [ ] Work grouped by concern; no file split across commits
 - [ ] Every commit has a one-or-two-line body; no trailers, no marketing adjectives
-- [ ] Versioned projects: version bumped everywhere it's declared, release commit on top
+- [ ] Versioned projects: changelog entry authored in the project's own format (per-version file + regenerated rollup, or a new dated section), version bumped everywhere it's declared, release commit on top
 - [ ] Annotated tag with a headline-digest message (if the project tags)
 - [ ] Working tree clean, tag points at HEAD
 - [ ] Nothing pushed unless the project's flow or the user called for it
