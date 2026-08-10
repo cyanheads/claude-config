@@ -7,6 +7,8 @@ description: >
   bootstrap, spin up, or set up one. Triggers: "new project", "start a new project", "create a
   new repo", "spin up a repo", "scaffold <name>", "bootstrap <name>", "set up a project for X",
   "make this a real project", "init a repo", "let's build X" when there is no repo yet.
+  NOT for MCP servers — those scaffold via their framework (`bunx @cyanheads/mcp-ts-core init`),
+  which bakes these conventions in; stop and use that path instead.
 metadata:
   author: cyanheads
   version: "1.0"
@@ -22,7 +24,7 @@ Not this skill:
 | Situation | Go instead |
 |:---|:---|
 | Repo already exists | Just do the work; `polish`/`git-wrapup` for shipping |
-| A framework owns the scaffold (e.g. an MCP server on a framework with an `init`) | Run that scaffolder, then follow **its** setup skill — this skill's conventions are already baked in there |
+| **An MCP server** — or anything else whose framework owns the scaffold | **Stop.** Run the framework's scaffolder (`bunx @cyanheads/mcp-ts-core init <name>` for MCP servers), then follow **its** setup skill — this skill's conventions are already baked in there |
 | One-off script, throwaway analysis | Scratchpad file. A repo is not the answer to every task |
 
 ## Ask once, then build
