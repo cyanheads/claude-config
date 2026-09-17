@@ -7,7 +7,7 @@ description: >
   own release flow says push is the release.
 metadata:
   author: cyanheads
-  version: "1.1"
+  version: "1.2"
   type: workflow
 ---
 
@@ -41,10 +41,12 @@ If a gate is red, fix it first — including a failure that predates this sessio
 
 ```bash
 git status
-git diff --stat
-git diff                    # read the actual content, not just the file list
+git diff HEAD --stat        # every uncommitted change, staged or not
+git diff HEAD               # read the actual content, not just the file list
 git log <last-tag>..HEAD --oneline    # versioned projects: what's already landed
 ```
+
+Diff against `HEAD`, not the index: plain `git diff` omits staged changes, so a group staged before wrap-up began (a `git mv`, a hook's output) shows up as a `git status` line to scroll past and nowhere in the review. Whatever is staged is part of what ships and gets grouped in step 2 like everything else.
 
 Clean tree with nothing since the last tag → halt, nothing to wrap up.
 
@@ -54,12 +56,14 @@ Never `git add -A` into one blob; never one-file-per-commit ceremony. Group the 
 
 **The file is the atomic boundary.** Never split one file's changes across commits — not with `git add -p`, not by editing the file between commits, not by any other mechanism. When one file serves two concerns it ships whole, in the commit of its dominant concern. If that feels wrong, extract the shared part as its own commit first, then build on it.
 
-Stage each group explicitly and commit it before moving to the next:
+Stage each group explicitly and commit it by pathspec before moving to the next:
 
 ```bash
 git add <paths-for-this-concern>
-git commit -m "<subject>" -m "<one-line body>"
+git commit --only <paths-for-this-concern> -m "<subject>" -m "<one-line body>"
 ```
+
+**Commit by pathspec, never the bare index.** A bare `git commit` commits everything staged, not the paths just added, so anything staged before wrap-up began — or staged concurrently by another session or a hook — rides into the first concern's commit. `--only` takes the named paths' working-tree content and disregards the rest of the index; a pre-staged group stays staged, to be committed as its own concern or reported. Anything still staged at step 6 fails the clean-tree check instead of shipping silently.
 
 ### 3. Write the messages
 
