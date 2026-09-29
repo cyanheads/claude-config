@@ -28,6 +28,7 @@
     "defaultMode": "auto",
     "additionalDirectories": []
   },
+  "model": "opus",
   "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [],
   "disabledMcpjsonServers": [],
@@ -40,7 +41,8 @@
     "pyright-lsp@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true,
-    "kotlin-lsp@claude-plugins-official": true
+    "kotlin-lsp@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true
   },
   "viewMode": "verbose",
   "sandbox": {
@@ -50,11 +52,21 @@
     "excludedCommands": []
   },
   "feedbackSurveyRate": 0,
+  "feedbackDrafts": "off",
   "spinnerTipsEnabled": true,
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "fastMode": false,
-  "switchModelsOnFlag": false,
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "xhigh"
+    },
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
+    }
+  },
   "awaySummaryEnabled": false,
   "askUserQuestionTimeout": "never",
   "autoUpdatesChannel": "latest",
@@ -62,9 +74,11 @@
   "prefersReducedMotion": false,
   "showThinkingSummaries": true,
   "skipWorkflowUsageWarning": true,
+  "theme": "dark",
   "verbose": true,
   "preferredNotifChannel": "ghostty",
   "autoCompactEnabled": false,
+  "switchModelsOnFlag": false,
   "fileCheckpointingEnabled": true,
   "showTurnDuration": true,
   "showMessageTimestamps": true,
