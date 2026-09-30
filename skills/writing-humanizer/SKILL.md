@@ -15,7 +15,7 @@ When given text to humanize:
 2. **Fix problematic sections** - Delete or rewrite; deletion usually wins (see "The rephrase trap" below), and what stays gets a receipt, not a softer adjective (see "The receipt rule")
 3. **Preserve meaning** - Keep the core message intact
 4. **Maintain voice** - Match the intended tone (formal, casual, technical, etc.)
-5. **Add soul** - Don't just remove bad patterns; inject actual personality
+5. **Keep the voice** - When a voice guide or the author's own draft sets the voice, match it. The "Personality and soul" moves are for text with no voice at all, and never add an opinion, feeling, or experience the author didn't express.
 
 ---
 
@@ -42,10 +42,11 @@ When a flagged sentence has to stay, the repair is a receipt, not a milder adjec
 **After:**
 > The rewrite fixed 128 bugs that reproduced in the old version and cut the Linux binary from 88 MB to 70 MB.
 
-Two corollaries:
+Three corollaries:
 
 - **No receipt on hand → don't keep the claim.** Delete it or go get the number. Writing around a missing receipt ("significantly faster in many scenarios") is how hedged slop gets made.
 - **Surviving praise points outward.** Warmth aimed at someone else's work reads human and keeps; praise aimed at your own work gets replaced by the receipt that would justify it.
+- **Never invent the receipt.** The After examples in this guide assume the specific already exists in the source or the author's notes. A number, study, name, or quote that isn't there gets fetched from a real source or flagged for the author, never supplied.
 
 ---
 
@@ -326,10 +327,10 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 
 ### 18. Curly Quotation Marks
 
-**Problem:** ChatGPT uses curly quotes ("...") instead of straight quotes ("...").
+**Problem:** ChatGPT uses curly quotes (“...”, U+201C/U+201D) instead of straight quotes ("...").
 
 **Before:**
-> He said "the project is on track" but others disagreed.
+> He said “the project is on track” but others disagreed.
 
 **After:**
 > He said "the project is on track" but others disagreed.
@@ -350,7 +351,7 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 **After:**
 > The French Revolution began in 1789 when financial crisis and food shortages led to widespread unrest.
 
-**Email register (the outbound-correspondence variant):** in email the same reflex shows up as boilerplate openers and closers — "I hope this email finds you well," "I wanted to reach out," "I trust this message finds you well," "Please don't hesitate to reach out," "Looking forward to hearing from you." Open on the actual reason for writing, not throat-clearing; close with a plain, specific line, not a template. Warmth itself isn't the tell: a real greeting and a genuine thanks are human; the boilerplate is what to cut.
+**Email register (the outbound-correspondence variant):** in email the same reflex shows up as boilerplate openers and closers — "I hope this email finds you well," "I wanted to reach out," "I trust this message finds you well," "Please don't hesitate to reach out," "Looking forward to hearing from you." Open on the actual reason for writing, not throat-clearing; close with a plain, specific line, not a template. Warmth itself isn't the tell: a real greeting and a genuine thanks are human; the boilerplate is what to cut. A plain ask like "let me know if that works" is ordinary correspondence and stays; the tell is the chatbot offer to do more ("Let me know if you'd like me to expand on any section").
 
 ---
 
@@ -418,19 +419,6 @@ Avoiding AI patterns is only half the job. Sterile, voiceless writing is just as
 
 ---
 
-## Process
-
-1. Read the input text carefully
-2. Identify all instances of the patterns above
-3. Rewrite each problematic section
-4. Ensure the revised text:
-   - Sounds natural when read aloud
-   - Varies sentence structure naturally
-   - Uses specific details over vague claims
-   - Maintains appropriate tone for context
-   - Uses simple constructions (is/are/has) where appropriate
-5. Present the humanized version
-
 ## Output Format
 
 Provide:
@@ -458,7 +446,7 @@ Provide:
 >
 > In conclusion, the future looks bright. Exciting times lie ahead as we continue this journey toward excellence. Let me know if you'd like me to expand on any section!
 
-**After (Humanized):**
+**After (Humanized — the studies and interviews stand in for facts the author already has):**
 > AI coding assistants speed up some tasks. In a 2024 study by Google, developers using Codex completed simple functions 55% faster than a control group, but showed no improvement on debugging or architectural decisions.
 >
 > The tools are good at boilerplate: config files, test scaffolding, repetitive refactors. They are bad at knowing when they are wrong. I have mass-accepted suggestions that compiled, passed lint, and still did the wrong thing because I stopped paying attention.
