@@ -86,7 +86,7 @@
   "remoteControlAtStartup": true,
   "isolatePeerMachines": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": false,
+  "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "defaultView": "transcript"
 }
