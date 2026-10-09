@@ -234,6 +234,7 @@
 
   <search_tactics>
     <rule>If you know the docs site (e.g., MDN, Node API, library docs), pull the page directly with markdown-new instead of searching around it.</rule>
+    <rule>When a dedicated data tool is available for the domain (papers, government statistics, CVEs, Q&A sites), prefer it over web search: it returns primary records, not pages about them.</rule>
     <rule>Scale the first pass to the question. A precise lookup (a version, a flag, an error string) is one query. An open question gets 3-4 variations sent in the same turn: different phrasing, with/without library name, conceptual vs specific ("how to X" vs "LibName X API"). Cast wide.</rule>
     <rule>When the search tool offers depth tiers (e.g. WebSearch `standard` / `extended`), default to the cheap tier. Start deep only for niche facts, very recent events, prices and availability, or multi-step research; otherwise escalate a single query when the cheap tier comes back thin, off-target, or stale. Never fan out deep queries by reflex.</rule>
     <rule>Pause and extract signal. First-pass results reveal the right vocabulary: official API names, package versions, canonical error strings, author handles, correct spellings of proper nouns. Identify what you didn't know before searching.</rule>
