@@ -350,7 +350,7 @@ A pass can introduce its own tells. Check for these before finishing:
 
 ## Final check
 
-1. Read the last sentence of every paragraph and section in sequence. If more than one lands as a quotable line, flatten all but the strongest.
+1. Read the last sentence of every paragraph and section in sequence. If more than one reads as a quotable line, flatten all but the strongest.
 2. Scan for a sentence shape or phrase that recurs across sections.
 3. Trace every number, name, date, and quote to the source or the author's notes. Anything that doesn't trace is removed or flagged.
 4. Read the opening. It should start on the subject, not on a framing statement about the subject.
