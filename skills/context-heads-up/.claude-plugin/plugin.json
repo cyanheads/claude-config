@@ -1,0 +1,27 @@
+{
+  "name": "context-heads-up",
+  "version": "0.1.0",
+  "description": "Tells each thread when its context passes set shares of the model's window: the main thread to compact at a pause, a sub-agent to wrap up and hand back",
+  "author": { "name": "cyanheads", "url": "https://github.com/cyanheads" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "headsUpPercent": {
+      "type": "number",
+      "title": "Heads-up at (% of window)",
+      "description": "Share of the model's context window at which a thread gets its first note: the main thread to look for a pause to compact, a sub-agent to wrap up.",
+      "default": 50
+    },
+    "overduePercent": {
+      "type": "number",
+      "title": "Overdue at (% of window)",
+      "description": "Share of the window at which a thread gets the overdue note.",
+      "default": 55
+    },
+    "ceilingPercent": {
+      "type": "number",
+      "title": "Never past (% of window)",
+      "description": "The ceiling the main thread's overdue note names as the point never to pass.",
+      "default": 60
+    }
+  }
+}
