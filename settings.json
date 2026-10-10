@@ -28,6 +28,8 @@
     "additionalDirectories": []
   },
   "model": "opus",
+  "promptCacheTtl": "1h",
+  "subagentPromptCacheTtl": "1h",
   "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [],
   "disabledMcpjsonServers": [],
@@ -63,7 +65,7 @@
       "effortLevel": "high"
     },
     "claude-opus-5-5": {
-      "effortLevel": "xhigh"
+      "effortLevel": "high"
     }
   },
   "awaySummaryEnabled": false,
