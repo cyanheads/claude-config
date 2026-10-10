@@ -54,7 +54,7 @@ Diff against `HEAD`, not the index: plain `git diff` omits staged changes, so a 
 
 **Read every untracked file in full.** New files ship through `git add` like any other change, but no diff shows their content, and `git status` collapses a new directory to a single line.
 
-**Decide what's yours to ship.** Changes outside the work you were asked to land are candidates, not automatic exclusions. A complete, safe change that has sat idle for hours folds in as its own commit. A change you don't recognize from the last few minutes (check mtimes) may have an active writer: leave it out and report it. Anything unsafe or secret-bearing stays out regardless.
+**Ship only finished work no one is still writing.** Uncommitted changes outside the work you were asked to land are candidates, not automatic exclusions: git records no author for them, so judge each from the evidence. A complete, safe change that has sat idle for hours folds in as its own commit. A change this run didn't make, modified in the last few minutes (check mtimes) or visibly half-done, may belong to a session still writing it: leave it uncommitted and report it, since committing it would ship work in progress and leave its writer editing on top of a commit. Anything unsafe or secret-bearing stays out regardless.
 
 Clean tree with nothing since the last tag → halt, nothing to wrap up.
 
