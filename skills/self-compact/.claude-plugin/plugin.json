@@ -1,0 +1,6 @@
+{
+  "name": "self-compact",
+  "version": "0.1.1",
+  "description": "Lets the main thread compact itself at a pause it picks, then resume with a line it wrote or wait for the user",
+  "author": { "name": "cyanheads", "url": "https://github.com/cyanheads" }
+}
