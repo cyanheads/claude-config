@@ -29,6 +29,7 @@ Series directories are `<major>.<minor>.x`. Pre-releases consolidate as sub-head
 "changelog:check": "bun run scripts/build-changelog.ts --check"
 ```
 
+   Python projects wire the same two commands as `Makefile` targets (`bun scripts/build-changelog.ts`, with `--check` for the second).
 4. Add `changelog:check` to the project's gate command. Drift between `changelog/` and `CHANGELOG.md` then fails the gate instead of shipping.
 5. Write `changelog/0.1.x/0.1.0.md` for the scaffold and run `changelog:build`.
 
@@ -57,6 +58,4 @@ H1 is `# <version> — YYYY-MM-DD` with a real date. Sections in Keep a Changelo
 
 ## The tag is a derivative, not a copy
 
-The annotated tag body becomes the GitHub Release body (`--notes-from-tag`). It is a condensed, scannable version of the changelog entry: a subject line **without** the version (hosts prepend `v<VERSION>:`), one or two sentences of context, then flat sections with bullets. Never a comma-spliced single line. Depth stays in the changelog; the tag records existence.
-
-`git tag -a` needs `--cleanup=whitespace` when the message is markdown — the default strips `#`-leading lines as comments and silently eats headers.
+The annotated tag body becomes the GitHub Release body (`--notes-from-tag`). It is a condensed digest of the changelog entry, never a copy: depth stays in the changelog, and the tag records existence. Its format and the command that creates it (`git tag -a -F <file> --cleanup=whitespace`) are owned by the `git-wrapup` skill, step 5, or by the project's own release skill when it has one. Follow that, not a copy of it here.

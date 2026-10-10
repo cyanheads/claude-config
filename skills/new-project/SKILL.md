@@ -11,7 +11,7 @@ description: >
   which bakes these conventions in; stop and use that path instead.
 metadata:
   author: cyanheads
-  version: "1.0"
+  version: "1.1"
   type: workflow
 ---
 
@@ -43,6 +43,16 @@ Everything below has a default, so a scaffold rarely needs to stall. Ask **one**
 
 ## 1 — Directory and git
 
+Confirm the name is free everywhere it will live before creating anything:
+
+```bash
+test ! -e ~/Developer/github/<name>     # must succeed — the directory doesn't exist
+gh repo view <owner>/<name>             # must fail — no repo by that name
+npm view <name> name                    # publishing projects only — must 404
+```
+
+Any hit → stop and pick another name with the user; never scaffold over an existing directory or repo.
+
 ```bash
 mkdir -p ~/Developer/github/<name> && cd ~/Developer/github/<name>
 git init -b main
@@ -58,21 +68,37 @@ Stack defaults — 2026, no legacy patterns:
 
 | Language | Defaults |
 |:---|:---|
-| TypeScript | Bun runtime + package manager · ESM only (`"type": "module"`) · `strict` + `noUncheckedIndexedAccess` + `verbatimModuleSyntax` + `erasableSyntaxOnly` + `moduleResolution: "bundler"` · Biome for lint **and** format (not ESLint/Prettier) · Vitest · Zod at system edges · engines pinned (`bun >=1.3`, `node >=24`) · lockfile committed |
-| Python | `uv` for everything (`uv venv` in-project, `uv add`, `uv run`) · `pyproject.toml` · ruff · pytest |
+| TypeScript | Bun runtime + package manager · ESM only (`"type": "module"`) · `strict` + `noUncheckedIndexedAccess` + `verbatimModuleSyntax` + `erasableSyntaxOnly` + `moduleResolution: "bundler"` · Biome for lint **and** format (not ESLint/Prettier) · Vitest · Zod at system edges · engines pinned to the installed versions (`bun --version`, `node --version`), never to a remembered number · lockfile committed |
+| Python | `uv` for everything (`uv venv` in-project, `uv add`, `uv run`) · `pyproject.toml` · ruff for lint **and** format · a type checker (pyright or mypy) · pytest · lockfile committed |
 
 Files at the root, all of them present before the first commit:
 
-- `package.json` — complete metadata, not just name/version: `description` (see below), `keywords`, `repository`, `bugs`, `homepage`, `author`, `license`, `engines`, `files` if published
-- `tsconfig.json`, `biome.json`, `bunfig.toml`
-- `.gitignore` — `.env` in it before `.env` exists
+- `.gitignore` — dependencies (`node_modules/`, `.venv/`), build output, `.env`, and OS cruft (`.DS_Store`), all in it before any of them exists
 - `.env.example` — every var the code reads, with a comment and a safe default. Real secrets never leave `.env`
 - `LICENSE` (public repos)
 - `README.md` → `references/readme.md`
 - `CLAUDE.md` + `AGENTS.md` → `references/agent-protocol.md`
 - `CHANGELOG.md` + `changelog/` + `scripts/build-changelog.ts` → `references/changelog.md`
 
-**Wire the gate before the first commit.** One command that a later session can trust: `bun run check` (typecheck + lint + test), or `devcheck` if the project grows its own. A project whose gate arrives later never gets one.
+TypeScript adds:
+
+- `package.json` — complete metadata, not just name/version: `description` (see below), `keywords`, `repository`, `bugs`, `homepage`, `author`, `license`, `engines`, `files` if published
+- `tsconfig.json`, `biome.json`, `bunfig.toml`, `bun.lock`
+
+Python adds:
+
+- `pyproject.toml` — complete `[project]` metadata (`description`, `keywords`, `urls`, `authors`, `license`, `requires-python`) plus `[tool.ruff]` and the type checker's config
+- `.python-version`, `uv.lock`
+- A `Makefile` whose `check` target is the gate. The changelog builder still runs under Bun (`bun scripts/build-changelog.ts`), so Bun is a dev prerequisite here too
+
+**Wire the gate before the first commit.** One command that a later session can trust, green on the empty scaffold, or devcheck if the project grows its own. A project whose gate arrives later never gets one.
+
+| Language | Gate |
+|:---|:---|
+| TypeScript | `"check": "tsc --noEmit && biome check . && vitest run --passWithNoTests && bun run changelog:check"` in `package.json` |
+| Python | `check:` target running `uv run ruff check`, `uv run ruff format --check`, the type checker, `uv run pytest`, and `bun scripts/build-changelog.ts --check` |
+
+`--passWithNoTests` keeps the gate green before the first test exists; drop it once tests land.
 
 **Supply-chain hold** — `bunfig.toml` gets `[install] minimumReleaseAge = 259200` (3 days). New projects inherit the guard rather than bolting it on after an incident.
 
@@ -103,9 +129,29 @@ gh repo edit --homepage "<url>"     # only if there is a real one
 
 `--private` unless the decision above said public. Flipping private→public later is one command; the reverse leaks.
 
+**Public repos get the free security settings** — at creation, or the moment a private repo goes public:
+
+```bash
+gh api -X PATCH repos/<owner>/<name> \
+  -f 'security_and_analysis[secret_scanning][status]=enabled' \
+  -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
+gh api -X PUT repos/<owner>/<name>/private-vulnerability-reporting
+```
+
+Don't add Dependabot config or CI workflows by reflex: a workflow that re-runs the local gate is maintenance cost without new signal. Add one when the project has a real need for it.
+
 ## 5 — Initial commit and push
 
 A new-project request **authorizes** the scaffold commit, the repo creation, and the initial push — that is what "set up the repo" means. It does not authorize any commit after that one; from there the standing rule applies (commit only when asked).
+
+Run the gate, then read what's about to be staged before staging it:
+
+```bash
+bun run check                    # or `make check` — must be green
+git status --short --untracked-files=all
+```
+
+Every listed path should be a scaffold file you meant to write. A `node_modules/`, `.venv/`, build output, `.DS_Store`, or `.env` in that list means `.gitignore` is incomplete: fix it and re-check. The first push to a public repo is permanent.
 
 ```bash
 git add .
@@ -117,17 +163,19 @@ Then verify the surface actually came up — the repo page, the description, the
 
 ## 6 — Register it
 
-A new repo that nothing points at is invisible next session. Same turn: add it wherever the environment tracks projects — the workspace `CLAUDE.md` repo list, an inventory or catalog file, a dashboard's source data. If the project earns a standing commit grant or a gate command a future session must know, that goes in the same edit.
+A new repo that nothing points at is invisible next session. Same turn: add it wherever the environment tracks projects — a workspace `CLAUDE.md` repo list, an inventory or catalog file, a dashboard's source data — following each list's own admission rule. Some lists take only standing infrastructure; a one-off or creative project that doesn't qualify stays out, and its own `CLAUDE.md` is enough. If the project earns a standing commit grant or a gate command a future session must know, that goes in the same edit.
 
 ## Checklist
 
+- [ ] Name confirmed free: no local directory, no GitHub repo, no npm package (if publishing)
 - [ ] `~/Developer/github/<name>/`, `git init -b main`
 - [ ] Skeleton is modular by domain; no `utils/` catch-all
-- [ ] `package.json` metadata complete; `.gitignore` covers `.env`; `.env.example` written
+- [ ] `package.json` / `pyproject.toml` metadata complete; engines from installed versions; `.gitignore` covers dependencies, build output, `.env`, `.DS_Store`; `.env.example` written
 - [ ] Gate command exists and passes on the empty scaffold
+- [ ] Staged paths reviewed before the scaffold commit
 - [ ] README follows `references/readme.md`
 - [ ] `CLAUDE.md` written for a cold agent; `AGENTS.md` symlink in place
 - [ ] `changelog/template.md`, `changelog/0.1.x/0.1.0.md`, generated `CHANGELOG.md`, builder script + `changelog:build` / `changelog:check` scripts
 - [ ] Description string identical in `package.json`, README tagline, repo description
-- [ ] Repo created with description + topics; initial commit pushed; surface verified
-- [ ] Project registered wherever the environment tracks repos
+- [ ] Repo created with description + topics; public repos have secret scanning, push protection, and private vulnerability reporting on; initial commit pushed; surface verified
+- [ ] Project registered wherever the environment tracks repos, per each list's admission rule

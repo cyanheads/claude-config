@@ -83,30 +83,10 @@ security: false
       - `hono` `^4.12.31` → `^4.12.32`
 
   TAG ANNOTATIONS — the annotated tag body renders as the GitHub Release body
-  via `gh release create --notes-from-tag`. The tag is a derivative of this
-  changelog entry — a condensed, scannable version, not a copy. Format:
-
-    <theme — omit version number, GitHub prepends it>
-                                                          ← blank line
-    <1-2 sentence context: what this release does>
-                                                          ← blank line
-    Dependency bumps:                                     ← section header
-                                                          ← blank line
-    - `hono` ^4.12.31 → ^4.12.32                          ← bullet
-                                                          ← blank line
-    Changed:                                              ← only sections with entries
-                                                          ← blank line
-    - `format()` output includes `query` in text mode
-                                                          ← blank line
-    Added:
-                                                          ← blank line
-    - `manifest.json` scaffolded for bundle support
-    - Install badges (Claude Desktop, Cursor, VS Code)
-                                                          ← blank line
-    <N> tests pass; `bun run check` clean.                ← footer
-
-  Never a flat comma-separated string. Always structured markdown with
-  sections. The tag must scan well as a rendered GitHub Release page.
+  via `gh release create --notes-from-tag`. It is a condensed digest of this
+  entry, never a copy, and its format is owned by the project's release skill
+  (the `git-wrapup` skill's step 5 when the project has none of its own).
+  Follow that skill; this template does not restate it.
 -->
 
 ## Added

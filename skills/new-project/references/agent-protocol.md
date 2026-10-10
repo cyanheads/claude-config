@@ -61,7 +61,13 @@ Trigger phrases are the words the user actually says, including the sloppy ones.
 
 ## Skills
 
-A workflow that will be run more than once — a release flow, a data refresh, a review pass — becomes `skills/<name>/SKILL.md` rather than another CLAUDE.md section. List them in a table in CLAUDE.md so an agent finds them without a directory walk, and give the project a `list-skills` script if there is more than a couple.
+A workflow that will be run more than once — a release flow, a data refresh, a review pass — becomes `.claude/skills/<name>/SKILL.md` rather than another CLAUDE.md section. That path is where Claude Code discovers project skills; link the other harnesses to the same tree so there is one copy to maintain:
+
+```bash
+mkdir -p .agents && ln -s ../.claude/skills .agents/skills
+```
+
+Keep a root `skills/` directory free: harnesses treat it as a plugin's skills, loaded into the agents of everyone who installs the project, not as development workflows for this repo. List the project's skills in a table in CLAUDE.md so an agent finds them without a directory walk, and give the project a `list-skills` script if there is more than a couple.
 
 ## Keep it current
 

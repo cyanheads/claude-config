@@ -24,7 +24,8 @@
  *   • --check   → exit 1 if CHANGELOG.md differs from what would be generated
  *
  * Missing `summary`: warning (not failure) — the entry renders header-only.
- * Summary > 350 chars, or malformed `breaking` / `security`: hard error.
+ * Summary > 350 chars, an unquoted summary containing `: `, or malformed
+ * `breaking` / `security`: hard error.
  *
  * @module scripts/build-changelog
  */
@@ -95,6 +96,10 @@ function parseFrontmatter(content: string, fileLabel: string): Frontmatter {
     let raw = (summaryMatch[1] ?? '').trim();
     if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
       raw = raw.slice(1, -1);
+    } else if (raw.includes(': ')) {
+      throw new Error(
+        `${fileLabel}: summary contains ': ' but is unquoted. Strict YAML parsers (GitHub's included) read that as a key separator and reject the file — wrap the value in double quotes.`,
+      );
     }
     summary = raw.length > 0 ? raw : null;
   }
@@ -199,7 +204,7 @@ function reportMissingSummaries(missing: string[]): void {
   for (const file of shown) console.warn(`  - ${file}`);
   if (extra > 0) console.warn(`  ... and ${extra} more`);
   console.warn(
-    `\nBackfill these — see CLAUDE.md/AGENTS.md § Changelog for the frontmatter format.`,
+    `\nBackfill these — see changelog/template.md for the frontmatter format.`,
   );
 }
 
