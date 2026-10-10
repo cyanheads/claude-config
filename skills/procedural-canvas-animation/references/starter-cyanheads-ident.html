@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cyanheads — ident</title>
+<style>
+  html,body{margin:0;background:#141416;color:#cfcfd4;font:12px/1.4 ui-monospace,Menlo,monospace}
+  #wrap{position:relative;width:720px}
+  #stage{width:720px;height:720px;display:block;background:#F2EDE3}
+  #load{position:absolute;left:0;top:0;width:720px;height:720px;display:flex;align-items:center;justify-content:center;background:#F2EDE3}
+  #load div{width:180px;height:3px;background:#dcd6ca}
+  #load i{display:block;height:3px;background:#2E3192;width:0}
+  #ui{width:720px;box-sizing:border-box;padding:8px 10px;display:flex;gap:10px;align-items:center;background:#0e0e10}
+  button{background:#1f1f24;color:#cfcfd4;border:1px solid #3a3a42;padding:3px 9px;font:inherit;cursor:pointer}
+  button:hover{background:#2a2a31}
+  #scrub{position:relative;flex:1;height:22px}
+  #scrub input{position:absolute;inset:0;width:100%;margin:0}
+  #marks{position:absolute;left:0;right:0;top:0;height:22px;pointer-events:none}
+  #marks i{position:absolute;top:0;width:1px;height:22px;background:#FF48B0;opacity:.75}
+  #marks b{position:absolute;top:0;font-weight:normal;color:#8a8a94;font-size:9px;transform:translateX(3px)}
+  #time{min-width:92px;text-align:right}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="stage"></canvas>
+  <div id="load"><div><i id="bar"></i></div></div>
+</div>
+<div id="ui">
+  <button id="play">play</button>
+  <button id="replay">replay</button>
+  <div id="scrub"><input id="range" type="range" min="0" max="8000" step="1" value="0"><div id="marks"></div></div>
+  <span id="time">0.000 / 8.000</span>
+  <button id="rec">record</button>
+</div>
+<script>
+'use strict';
+
+/* ---------- format ---------- */
+const W = 720, H = 720, CX = 360, CY = 360;
+const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+const DURATION = 8.0, FPS = 24;
+const RMAX = 540;                 // past the frame corner (509)
+const DISC_R = W * 0.55 / 2;      // 198
+const DOT_R = W * 0.022 / 2;      // ~7.9
+const PL_R = 150, TILT = -0.35;   // planet
+const PITCH = 5;                  // halftone pitch, css px
+const INK = { blue:'#0078BF', pink:'#FF48B0', yellow:'#FFE800', green:'#00A95C', orange:'#FF6C2F', violet:'#765BA7', indigo:'#2E3192' };
+const SCREEN_ANGLE = { blue:15, pink:75, yellow:0, green:45, orange:45, violet:75, indigo:45 };
+const ACTS = [[0,'I'],[1,'II'],[3.5,'dive'],[4.5,'III'],[5.5,'IV']];
+
+/* ---------- prng / noise (deterministic) ---------- */
+function mulberry32(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const rngFor = (...parts) => mulberry32(hashStr(parts.join('/')));
+function hash2(x, y, seed){ let h = (x * 374761393 + y * 668265263 + seed * 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function valueNoise(x, y, seed){
+  const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash2(x0, y0, seed), b = hash2(x0 + 1, y0, seed), c = hash2(x0, y0 + 1, seed), d = hash2(x0 + 1, y0 + 1, seed);
+  const top = a + (b - a) * sx, bot = c + (d - c) * sx;
+  return top + (bot - top) * sy;
+}
+
+/* ---------- easing ---------- */
+const ease = {
+  linear: p => p,
+  outQuad: p => 1 - (1 - p) * (1 - p),
+  outCubic: p => 1 - Math.pow(1 - p, 3),
+  inOutCubic: p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2,
+  inQuad: p => p * p,
+  outBack: p => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); },
+};
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+/* ---------- canvas helpers ---------- */
+function makeCanvas(){ const c = document.createElement('canvas'); c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return [c, g]; }
+function circle(g, x, y, r){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); }
+function clipCircle(g, x, y, r){ circle(g, x, y, Math.max(0.01, r)); g.clip(); }
+const cov = (g, c) => { g.fillStyle = g.strokeStyle = `rgba(0,0,0,${c})`; };   // coverage paint
+function wobblyCircle(g, cx, cy, r, rng, amp = 2, k = 5){
+  const p1 = rng() * 6.283, p2 = rng() * 6.283; g.beginPath();
+  for (let i = 0; i <= 96; i++){ const a = i / 96 * Math.PI * 2; const rr = r + amp * Math.sin(k * a + p1) + amp * 0.5 * Math.sin((k + 3) * a + p2); const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.closePath();
+}
+function wobblyLine(g, x0, y0, x1, y1, rng, amp = 1.2){
+  const n = 12, nx = -(y1 - y0), ny = (x1 - x0), L = Math.hypot(nx, ny) || 1; g.beginPath();
+  for (let i = 0; i <= n; i++){ const p = i / n, w = (rng() - 0.5) * amp * Math.sin(p * Math.PI); const x = x0 + (x1 - x0) * p + nx / L * w, y = y0 + (y1 - y0) * p + ny / L * w; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+}
+
+/* ---------- paper (generated once, static) ---------- */
+function makePaper(){
+  const [c, g] = makeCanvas(); const pw = c.width, ph = c.height;
+  const img = g.createImageData(pw, ph), d = img.data;
+  for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++){
+    const i = (y * pw + x) * 4;
+    const v = (hash2(x, y, 7) - 0.5) * 10 + (valueNoise(x / 140, y / 140, 11) - 0.5) * 9;
+    d[i] = 0xF2 + v; d[i + 1] = 0xED + v; d[i + 2] = 0xE3 + v * 0.8; d[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const r = rngFor('paper', 'fibres'); g.strokeStyle = 'rgba(120,100,70,0.07)'; g.lineWidth = 0.6;
+  for (let i = 0; i < 500; i++){ const x = r() * W, y = r() * H, a = r() * Math.PI, l = 4 + r() * 14; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  return c;
+}
+
+/* ---------- riso compositor ----------
+   coverage (alpha of a greyscale canvas) → clustered-dot halftone at the ink's screen angle
+   → tint → multiply onto paper with a per-scene registration offset. */
+function halftone(coverage, inkName, seedStr){
+  const pw = coverage.width, ph = coverage.height;
+  const src = coverage.getContext('2d').getImageData(0, 0, pw, ph).data;
+  const out = document.createElement('canvas'); out.width = pw; out.height = ph;
+  const og = out.getContext('2d'); const img = og.createImageData(pw, ph), d = img.data;
+  const [r, g, b] = hexRGB(INK[inkName]);
+  const ang = SCREEN_ANGLE[inkName] * Math.PI / 180, cos = Math.cos(ang), sin = Math.sin(ang);
+  const pitch = PITCH * DPR, seed = hashStr(seedStr) & 0xffff;
+  for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++){
+    const i = (y * pw + x) * 4; let c = src[i + 3] / 255; if (c <= 0.004) continue;
+    const n = valueNoise(x / 9, y / 9, seed);                     // uneven inking + starved voids
+    if (c > 0.96) c = n < 0.10 ? 0.55 : 1; else c *= 0.9 + 0.2 * n;
+    const rx = (x * cos + y * sin) / pitch, ry = (-x * sin + y * cos) / pitch;
+    const u = rx - Math.floor(rx) - 0.5, v = ry - Math.floor(ry) - 0.5;
+    const dc2 = u * u + v * v, ku = 0.5 - Math.abs(u), kv = 0.5 - Math.abs(v), dk2 = ku * ku + kv * kv;
+    const th = Math.min(Math.PI * dc2, 1 - Math.PI * dk2);       // dots grow, then holes shrink
+    if (c >= 1 || c > th){ d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255; }
+  }
+  const rr = rngFor(seedStr, 'speckle');                         // stray flecks in toned areas
+  for (let k = 0; k < pw * ph / 6000; k++){ const x = (rr() * pw) | 0, y = (rr() * ph) | 0, i = (y * pw + x) * 4; if (src[i + 3] > 40){ d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255; } }
+  og.putImageData(img, 0, 0); return out;
+}
+function renderScene(scene, paper){
+  const layers = {}, covs = {};
+  for (const ink of scene.inks){ const [c, g] = makeCanvas(); covs[ink] = c; layers[ink] = g; }
+  scene.draw(layers, rngFor('scene', scene.id));
+  const [out, og] = makeCanvas(); og.drawImage(paper, 0, 0, W, H);
+  const r = rngFor('reg', scene.id); const [dx, dy] = scene.reg;
+  scene.inks.forEach((ink, i) => {
+    const off = i === 0 ? 0 : 1 + r() * 2;                       // 1–3 px, fixed per-scene direction
+    og.save(); og.globalCompositeOperation = 'multiply';
+    og.drawImage(halftone(covs[ink], ink, scene.id + '/' + ink), dx * off, dy * off, W, H);
+    og.restore();
+  });
+  return out;
+}
+
+/* ---------- scene registry ---------- */
+const SCENES = {
+  pond: { id:'pond', inks:['blue','green','orange'], reg:[0.8,0.6], rim:'blue', draw(L, rng){
+    const g = L.blue;
+    cov(g, 0.42); circle(g, CX, CY, DISC_R + 6); g.fill();
+    for (const r of [26, 54, 88, 128, 172]){ cov(g, 1); g.lineWidth = 3.4 - r / 80; wobblyCircle(g, CX, CY, r, rng, 1.6, 4); g.stroke(); }
+    const gg = L.green;
+    for (const [x, y, r, a] of [[252,272,46,0.3],[468,298,38,2.1],[300,468,42,4.0],[456,452,30,1.2]]){
+      cov(gg, 1); gg.beginPath(); gg.moveTo(x, y); gg.arc(x, y, r, a + 0.35, a + Math.PI * 2 - 0.35); gg.closePath(); gg.fill();
+      gg.globalCompositeOperation = 'destination-out'; cov(gg, 0.55); gg.lineWidth = 1.6;
+      for (let k = 0; k < 6; k++){ const t = a + 0.6 + k * 0.85; gg.beginPath(); gg.moveTo(x, y); gg.lineTo(x + Math.cos(t) * r * 0.9, y + Math.sin(t) * r * 0.9); gg.stroke(); }
+      gg.globalCompositeOperation = 'source-over';
+      cov(g, 1); g.lineWidth = 1.8; g.beginPath(); g.arc(x, y, r + 1.5, a + 0.35, a + Math.PI * 2 - 0.35); g.stroke();
+    }
+    const koi = (x, y, ang, s) => {
+      const go = L.orange; go.save(); go.translate(x, y); go.rotate(ang); go.scale(s, s);
+      cov(go, 1); go.beginPath(); go.ellipse(0, 0, 34, 13, 0, 0, 6.29); go.fill();
+      go.beginPath(); go.moveTo(-28, 0); go.lineTo(-52, -16); go.lineTo(-44, 0); go.lineTo(-52, 16); go.closePath(); go.fill();
+      go.beginPath(); go.moveTo(4, -10); go.lineTo(0, -24); go.lineTo(14, -12); go.closePath(); go.fill();
+      go.beginPath(); go.moveTo(4, 10); go.lineTo(0, 24); go.lineTo(14, 12); go.closePath(); go.fill();
+      go.globalCompositeOperation = 'destination-out'; cov(go, 1); go.lineWidth = 2;     // white hatching highlight
+      for (let k = 0; k < 4; k++){ go.beginPath(); go.moveTo(-6 + k * 8, -9); go.lineTo(2 + k * 8, -3); go.stroke(); }
+      go.restore();
+      cov(g, 1); circle(g, x + Math.cos(ang) * 24 * s, y + Math.sin(ang) * 24 * s, 2.2); g.fill();   // eye in blue
+    };
+    koi(322, 236, -0.55, 1); koi(430, 428, 2.35, 0.85);
+  }},
+  turntable: { id:'turntable', inks:['indigo','yellow','violet'], reg:[-0.7,0.7], rim:'indigo', draw(L, rng){
+    const g = L.indigo;
+    cov(g, 0.85); wobblyCircle(g, CX, CY, DISC_R - 6, rng, 1.5, 6); g.fill();
+    g.globalCompositeOperation = 'destination-out'; cov(g, 0.45); g.lineWidth = 1.2;
+    for (let r = 70; r < DISC_R - 14; r += 7){ wobblyCircle(g, CX, CY, r, rng, 0.6, 7); g.stroke(); }
+    cov(g, 1); circle(g, CX, CY, 58); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    const gy = L.yellow; cov(gy, 1); wobblyCircle(gy, CX, CY, 58, rng, 0.8, 5); gy.fill();
+    const gv = L.violet; cov(gv, 1); gv.lineWidth = 2.5; wobblyCircle(gv, CX, CY, 50, rng, 0.8, 5); gv.stroke(); cov(gv, 0.5); circle(gv, CX, CY, 42); gv.fill();
+    g.globalCompositeOperation = 'destination-out'; cov(g, 1); g.lineCap = 'round'; g.lineWidth = 13;   // paper channel under the arm
+    wobblyLine(g, 500, 240, 428, 302, rng, 1); g.stroke(); g.lineWidth = 18; wobblyLine(g, 428, 302, 404, 324, rng, 0.5); g.stroke(); circle(g, 500, 240, 20); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    cov(gv, 1); gv.lineCap = 'round'; gv.lineWidth = 7; wobblyLine(gv, 500, 240, 428, 302, rng, 1); gv.stroke(); circle(gv, 500, 240, 16); gv.fill();
+    gv.lineWidth = 12; wobblyLine(gv, 428, 302, 404, 324, rng, 0.5); gv.stroke(); gv.lineWidth = 9; wobblyLine(gv, 500, 240, 522, 220, rng, 0.5); gv.stroke();
+  }},
+  planet: { id:'planet', inks:['indigo','blue','pink','yellow'], reg:[0.9,-0.4], rim:'indigo', draw(L, rng){
+    const g = L.indigo;
+    cov(g, 0.92); g.fillRect(-4, -4, W + 8, H + 8);
+    g.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 40; i++){ const x = rng() * W, y = rng() * H, r = 30 + rng() * 90; cov(g, 0.07); wobblyCircle(g, x, y, r, rng, 8, 3); g.fill(); }   // nebula haze
+    const stars = []; for (let i = 0; i < 150; i++){ const x = rng() * W, y = rng() * H, r = 0.8 + rng() * 1.8; stars.push([x, y, r]); cov(g, 1); circle(g, x, y, r); g.fill(); }
+    cov(g, 1); circle(g, CX, CY, PL_R + 3); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    const gb = L.blue; cov(gb, 0.7); wobblyCircle(gb, CX, CY, PL_R, rng, 1.2, 5); gb.fill();
+    gb.save(); gb.translate(CX, CY); gb.rotate(TILT); circle(gb, 0, 0, PL_R - 1); gb.clip();
+    cov(gb, 1); for (const [y, h] of [[-95,10],[-60,18],[-20,8],[25,22],[70,12]]) gb.fillRect(-PL_R, y, PL_R * 2, h);
+    gb.globalCompositeOperation = 'destination-out'; cov(gb, 1); gb.lineWidth = 2.2;
+    for (let i = 0; i < 9; i++){ gb.beginPath(); gb.moveTo(-PL_R + 10 + i * 7, -PL_R + 44); gb.lineTo(-PL_R + 54 + i * 7, -PL_R + 6); gb.stroke(); }   // hatched highlight
+    gb.restore();
+    const gp = L.pink; gp.save(); gp.translate(CX, CY); gp.rotate(TILT);
+    const band = (rx, ry, w, c) => { cov(gp, c); gp.beginPath(); gp.ellipse(0, 0, rx + w, ry + w * 0.3, 0, 0, 6.29); gp.ellipse(0, 0, rx, ry, 0, 0, 6.29, true); gp.fill('evenodd'); };
+    band(210, 52, 38, 1); band(258, 68, 26, 0.5);
+    gp.globalCompositeOperation = 'destination-out'; cov(gp, 1); circle(gp, 0, 0, PL_R + 2); gp.fill();
+    gp.globalCompositeOperation = 'source-over'; gp.beginPath(); gp.rect(-400, 0, 800, 400); gp.clip();
+    band(210, 52, 38, 1); band(258, 68, 26, 0.5);
+    gp.restore();
+    const gy = L.yellow; for (const [x, y, r] of stars) if (Math.hypot(x - CX, y - CY) > PL_R + 90 && rng() < 0.6){ cov(gy, 1); circle(gy, x, y, r * 1.5); gy.fill(); }
+  }},
+};
+
+/* ---------- hand-lettering: single-line glyph strokes, 1 em box, baseline y=0, y down ---------- */
+const arcPts = (cx, cy, r, a0, a1, n = 18) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
+const P = Math.PI;
+const GLYPHS = {
+  c: { adv: 0.58, strokes: [arcPts(0.31, -0.31, 0.26, -0.3 * P, -1.72 * P)] },
+  y: { adv: 0.60, strokes: [[[0.05,-0.6],[0.1,-0.25],[0.2,-0.02],[0.34,-0.12],[0.46,-0.4],[0.52,-0.6],[0.46,-0.1],[0.34,0.32],[0.16,0.42],[0.05,0.3]]] },
+  a: { adv: 0.64, strokes: [arcPts(0.3, -0.32, 0.26, -0.25 * P, -2.05 * P), [[0.56,-0.58],[0.55,-0.3],[0.58,0]]] },
+  n: { adv: 0.60, strokes: [[[0.06,-0.6],[0.07,-0.3],[0.07,0]], [[0.07,-0.3],[0.12,-0.55],[0.28,-0.63],[0.44,-0.5],[0.5,-0.25],[0.51,0]]] },
+  h: { adv: 0.60, strokes: [[[0.06,-1.0],[0.07,-0.5],[0.07,0]], [[0.07,-0.3],[0.12,-0.55],[0.28,-0.63],[0.44,-0.5],[0.5,-0.25],[0.51,0]]] },
+  e: { adv: 0.58, strokes: [[[0.08,-0.3],[0.3,-0.3],[0.5,-0.32],[0.52,-0.45],[0.36,-0.6],[0.15,-0.55],[0.05,-0.32],[0.12,-0.08],[0.32,0.0],[0.52,-0.06]]] },
+  d: { adv: 0.64, strokes: [arcPts(0.3, -0.32, 0.26, -0.25 * P, -2.05 * P), [[0.56,-1.0],[0.55,-0.5],[0.58,0]]] },
+  s: { adv: 0.56, strokes: [[[0.5,-0.55],[0.32,-0.63],[0.12,-0.52],[0.16,-0.36],[0.38,-0.28],[0.5,-0.14],[0.4,0.0],[0.18,0.0],[0.06,-0.08]]] },
+};
+function catmull(pts, per = 6){                       // smooth polyline through control points
+  if (pts.length < 3) return pts.slice();
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let k = 0; k < per; k++){ const t = k / per, t2 = t * t, t3 = t2 * t;
+      out.push([0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+                0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); }
+  }
+  out.push(pts[pts.length - 1]); return out;
+}
+const wordCache = new Map();
+function layoutWord(text, em, baseline){             // → strokes as px polylines with cumulative length; wobble baked in
+  const key = text + em + baseline; if (wordCache.has(key)) return wordCache.get(key);
+  const rng = rngFor('letter', text); const gap = 0.06;
+  const width = [...text].reduce((w, ch) => w + GLYPHS[ch].adv + gap, -gap) * em;
+  let x = CX - width / 2, total = 0; const strokes = [];
+  for (const ch of text){
+    for (const s of GLYPHS[ch].strokes){
+      const pts = catmull(s).map(([px, py]) => [x + px * em + (rng() - 0.5) * 1.1, baseline + py * em + (rng() - 0.5) * 1.1]);
+      const len = []; let L = 0; for (let i = 0; i < pts.length; i++){ if (i) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); len.push(L); }
+      strokes.push({ pts, len, L, start: total }); total += L;
+    }
+    x += (GLYPHS[ch].adv + gap) * em;
+  }
+  const word = { strokes, total }; wordCache.set(key, word); return word;
+}
+function strokeWord(g, word, drawn, inkName, ox, oy){ // draw first `drawn` px of the word's path, variable width
+  g.strokeStyle = INK[inkName]; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const s of word.strokes){
+    const upto = drawn - s.start; if (upto <= 0) break;
+    for (let i = 1; i < s.pts.length; i++){
+      if (s.len[i - 1] > upto) break;
+      const [x0, y0] = s.pts[i - 1]; let [x1, y1] = s.pts[i];
+      if (s.len[i] > upto){ const f = (upto - s.len[i - 1]) / (s.len[i] - s.len[i - 1]); x1 = x0 + (x1 - x0) * f; y1 = y0 + (y1 - y0) * f; }
+      g.lineWidth = 2.6 + 1.4 * Math.sin(s.len[i] * 0.09) * Math.sin(s.len[i] * 0.023);
+      g.beginPath(); g.moveTo(x0 + ox, y0 + oy); g.lineTo(x1 + ox, y1 + oy); g.stroke();
+    }
+  }
+}
+
+/* ---------- live elements ---------- */
+function drawRipple(g, p, inkName, seed){
+  if (p <= 0 || p >= 1) return;
+  const r = rngFor('ripple', seed); const ph = r() * 6.283, k = 3 + Math.floor(r() * 3), gapA = r() * 6.283, tickA = r() * 6.283, nt = 2 + Math.floor(r() * 2);
+  const e = ease.outQuad(p), R = DOT_R + e * (RMAX - DOT_R), w = 5.5 * (1 - e) + 0.9, amp = 1.5 + R * 0.008, span = 6.283 - 0.3;
+  g.save(); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 1 - p * p; g.fillStyle = INK[inkName];
+  const N = 120, outer = [], inner = [];
+  for (let i = 0; i <= N; i++){ const s = i / N, a = gapA + s * span; const taper = Math.min(1, s / 0.2, (1 - s) / 0.2); const rr = R + amp * Math.sin(k * a + ph); const ww = w * taper; outer.push([CX + Math.cos(a) * (rr + ww / 2), CY + Math.sin(a) * (rr + ww / 2)]); inner.push([CX + Math.cos(a) * (rr - ww / 2), CY + Math.sin(a) * (rr - ww / 2)]); }
+  g.beginPath(); outer.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); inner.reverse().forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.fill();
+  if (p > 0.04 && p < 0.32){                          // tick-mark arcs flick at the rim
+    g.strokeStyle = INK[inkName]; g.lineWidth = 2; g.lineCap = 'round';
+    for (let i = 0; i < nt; i++){ g.beginPath(); g.arc(CX, CY, R + 12 + i * 8, tickA - 0.11, tickA + 0.11); g.stroke(); }
+  }
+  g.restore();
+}
+function drawDot(g){
+  g.save(); g.globalCompositeOperation = 'multiply';
+  g.fillStyle = INK.pink; circle(g, CX + 1.7, CY + 0.5, DOT_R); g.fill();
+  g.fillStyle = INK.indigo; wobblyCircle(g, CX, CY, DOT_R, rngFor('dot'), 0.35, 5); g.fill();
+  g.restore();
+}
+function rim(g, cx, cy, rx, ry, w, inkName, id){
+  g.save(); g.globalCompositeOperation = 'multiply'; g.strokeStyle = INK[inkName]; g.lineWidth = w;
+  if (rx === ry) wobblyCircle(g, cx, cy, rx, rngFor('rim', id), 1.4, 6); else { g.beginPath(); g.ellipse(cx, cy, Math.max(0.5, rx), ry, 0, 0, 6.29); }
+  g.stroke(); g.restore();
+}
+function drawDisc(g, cue, t){
+  const scene = SCENES[cue.scene], bmp = scene.bitmap, p = clamp01((t - cue.start) / 0.5);
+  g.save();
+  if (cue.transition === 'grow'){ const r = DISC_R * ease.outBack(p); clipCircle(g, CX, CY, r); g.drawImage(bmp, 0, 0, W, H); g.restore(); rim(g, CX, CY, r, r, 3, scene.rim, scene.id); }
+  else if (cue.transition === 'coin'){ const sx = Math.max(0.02, ease.outCubic(p)); g.translate(CX, CY); g.scale(sx, 1); g.translate(-CX, -CY); clipCircle(g, CX, CY, DISC_R); g.drawImage(bmp, 0, 0, W, H); g.restore(); rim(g, CX, CY, DISC_R * sx, DISC_R, 3 + 14 * (1 - sx), scene.rim, scene.id); }
+  else { const e = ease.outCubic(p), dx = (1 - e) * 640, rot = (1 - e) * 0.4; g.translate(CX + dx, CY); g.rotate(rot); g.translate(-CX, -CY); clipCircle(g, CX, CY, DISC_R); g.drawImage(bmp, 0, 0, W, H); g.restore(); g.save(); g.translate(CX + dx, CY); g.rotate(rot); g.translate(-CX, -CY); rim(g, CX, CY, DISC_R, DISC_R, 3, scene.rim, scene.id); g.restore(); }
+}
+function drawDive(g, cue, t){
+  const scene = SCENES[cue.scene], p = clamp01((t - cue.start) / 0.35), r = DISC_R + (RMAX - DISC_R) * ease.inOutCubic(p);
+  g.save(); clipCircle(g, CX, CY, r); g.drawImage(scene.bitmap, 0, 0, W, H); g.restore();
+  if (p < 1) rim(g, CX, CY, r, r, 3, scene.rim, scene.id);
+}
+const EM = 64, BASELINE = 312;
+function drawHandwriting(g, p, text){
+  const word = layoutWord(text, EM, BASELINE), drawn = ease.linear(p) * word.total;
+  g.save(); g.globalCompositeOperation = 'multiply';
+  strokeWord(g, word, drawn, 'pink', 1.8, 0.7); strokeWord(g, word, drawn, 'indigo', 0, 0);
+  g.restore();
+}
+function drawDissolve(g, p, text){
+  const word = layoutWord(text, EM, BASELINE), rng = rngFor('dissolve', text);
+  g.save(); g.globalCompositeOperation = 'multiply';
+  for (const s of word.strokes) for (let d = 0; d < s.L; d += 4.5){
+    let i = 1; while (s.len[i] < d) i++;
+    const f = (d - s.len[i - 1]) / ((s.len[i] - s.len[i - 1]) || 1), x = s.pts[i - 1][0] + (s.pts[i][0] - s.pts[i - 1][0]) * f, y = s.pts[i - 1][1] + (s.pts[i][1] - s.pts[i - 1][1]) * f;
+    const delay = rng() * 0.35, r = 2.3 * (1 - ease.inQuad(clamp01((p - delay) / 0.65)));
+    if (r <= 0.05) continue;
+    g.fillStyle = INK.pink; circle(g, x + 1.8, y + 0.7, r); g.fill(); g.fillStyle = INK.indigo; circle(g, x, y, r); g.fill();
+  }
+  g.restore();
+}
+
+/* ---------- timeline (data, on the 120 BPM grid) ---------- */
+const CUES = [
+  { start: 0.00, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r1' } },
+  { start: 0.50, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r2' } },
+  { start: 1.00, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r3' } },
+  { start: 1.00, dur: 3.50, kind: 'disc', scene: 'pond', transition: 'grow' },
+  { start: 1.75, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r4' } },
+  { start: 1.75, dur: 2.75, kind: 'disc', scene: 'turntable', transition: 'coin' },
+  { start: 2.50, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r5' } },
+  { start: 2.50, dur: 1.00, kind: 'disc', scene: 'planet', transition: 'slide' },
+  { start: 3.50, dur: 1.00, kind: 'dive', scene: 'planet' },
+  { start: 4.50, dur: 0.80, kind: 'ripple', params: { ink: 'blue', seed: 'r6' } },
+  { start: 5.00, dur: 0.80, kind: 'ripple', params: { ink: 'pink', seed: 'r7' } },
+  { start: 5.50, dur: 2.00, kind: 'handwriting', params: { text: 'cyanheads', write: 1.6 } },
+  { start: 7.50, dur: 0.50, kind: 'dissolve', params: { text: 'cyanheads' } },
+];
+
+/* ---------- render(t): pure ---------- */
+const canvas = document.getElementById('stage'); canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+const ctx = canvas.getContext('2d');
+let paper;
+function render(t){
+  t = Math.max(0, Math.min(DURATION, t));
+  const g = ctx; g.setTransform(DPR, 0, 0, DPR, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  g.drawImage(paper, 0, 0, W, H);
+  const active = CUES.filter(c => t >= c.start && t < c.start + c.dur);
+  for (const c of active) if (c.kind === 'disc') drawDisc(g, c, t);
+  for (const c of active) if (c.kind === 'dive') drawDive(g, c, t);
+  for (const c of active) if (c.kind === 'ripple') drawRipple(g, (t - c.start) / c.dur, c.params.ink, c.params.seed);
+  for (const c of active) if (c.kind === 'handwriting') drawHandwriting(g, clamp01((t - c.start) / c.params.write), c.params.text);
+  for (const c of active) if (c.kind === 'dissolve') drawDissolve(g, (t - c.start) / c.dur, c.params.text);
+  drawDot(g);
+}
+
+/* ---------- playback + controls ---------- */
+let playing = false, tCur = 0, wallAtPlay = 0, tAtPlay = 0, recorder = null;
+const $ = id => document.getElementById(id);
+function ui(){ $('range').value = Math.round(tCur * 1000); $('time').textContent = `${tCur.toFixed(3)} / ${DURATION.toFixed(3)}`; $('play').textContent = playing ? 'pause' : 'play'; }
+function seek(t){ playing = false; tCur = Math.max(0, Math.min(DURATION, t)); render(tCur); ui(); }
+function play(){ if (tCur >= DURATION) tCur = 0; playing = true; wallAtPlay = performance.now(); tAtPlay = tCur; ui(); }
+function pause(){ playing = false; ui(); }
+function loop(now){
+  if (playing){ tCur = tAtPlay + (now - wallAtPlay) / 1000; if (tCur >= DURATION){ tCur = DURATION; playing = false; if (recorder){ recorder.stop(); recorder = null; } } render(tCur); ui(); }
+  requestAnimationFrame(loop);
+}
+$('play').onclick = () => playing ? pause() : play();
+$('replay').onclick = () => { seek(0); play(); };
+$('range').oninput = e => seek(e.target.value / 1000);
+$('rec').onclick = () => {
+  if (recorder) return;
+  const stream = canvas.captureStream(FPS), chunks = [];
+  recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 12e6 });
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = 'cyanheads-ident.webm'; a.click(); };
+  seek(0); recorder.start(); play();
+};
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space'){ e.preventDefault(); playing ? pause() : play(); }
+  else if (e.code === 'ArrowLeft'){ seek(tCur - 1 / FPS); }
+  else if (e.code === 'ArrowRight'){ seek(tCur + 1 / FPS); }
+});
+for (const [t, label] of ACTS){ const i = document.createElement('i'), b = document.createElement('b'); i.style.left = b.style.left = `${t / DURATION * 100}%`; b.textContent = label; $('marks').append(i, b); }
+
+/* ---------- pre-render (once, with a loading bar) + seek contract ---------- */
+const ready = (async () => {
+  const tick = f => new Promise(r => { $('bar').style.width = `${Math.round(f * 100)}%`; requestAnimationFrame(() => r()); });
+  await tick(0.05); paper = makePaper();
+  const ids = Object.keys(SCENES);
+  for (let i = 0; i < ids.length; i++){ await tick((i + 1) / (ids.length + 1)); SCENES[ids[i]].bitmap = renderScene(SCENES[ids[i]], paper); }
+  await tick(1); $('load').style.display = 'none';
+  const t0 = new URLSearchParams(location.search).get('t');
+  seek(t0 === null ? 0 : Number(t0));
+  requestAnimationFrame(loop);
+})();
+window.__anim = { duration: DURATION, ready, seek };
+</script>
+</body>
+</html>

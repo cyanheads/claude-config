@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>piece</title>
+<style>
+  html,body{margin:0;background:#141416;color:#cfcfd4;font:12px/1.4 ui-monospace,Menlo,monospace}
+  #wrap{position:relative;display:inline-block}
+  #stage{display:block}
+  #load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141416}
+  #load div{width:180px;height:3px;background:#2a2a31}
+  #load i{display:block;height:3px;background:#cfcfd4;width:0}
+  #ui{box-sizing:border-box;padding:8px 10px;display:flex;gap:10px;align-items:center;background:#0e0e10}
+  button{background:#1f1f24;color:#cfcfd4;border:1px solid #3a3a42;padding:3px 9px;font:inherit;cursor:pointer}
+  #scrub{position:relative;flex:1;height:22px}
+  #scrub input{position:absolute;inset:0;width:100%;margin:0}
+  #marks{position:absolute;inset:0;pointer-events:none}
+  #marks i{position:absolute;top:0;width:1px;height:22px;background:#FF48B0;opacity:.75}
+  #marks b{position:absolute;top:0;font-weight:normal;color:#8a8a94;font-size:9px;transform:translateX(3px)}
+  #time{min-width:92px;text-align:right}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="stage"></canvas>
+  <div id="load"><div><i id="bar"></i></div></div>
+</div>
+<div id="ui">
+  <button id="play">play</button>
+  <button id="replay">replay</button>
+  <div id="scrub"><input id="range" type="range" min="0" max="1000" step="1" value="0"><div id="marks"></div></div>
+  <span id="time">0.000</span>
+  <button id="rec">record</button>
+</div>
+<script>
+'use strict';
+/**
+ * Style-neutral engine harness for a procedural Canvas 2D film.
+ *
+ * Paste one style example (the ```js block of a styles/*.md file) between the STYLE markers.
+ * The style block must define:
+ *   const DURATION      seconds
+ *   async setup()       builds every cached texture/bitmap once; may await tick(f) to move the bar
+ *   render(g, t)        draws frame t onto g; pure function of t; g arrives reset to CSS-px space
+ * and may define:
+ *   const ACTS          [[seconds, 'label'], ...] scrubber markers
+ *
+ * The harness provides the core below, playback, controls, Record, ?t=<s>, and the seek contract
+ * window.__anim = { duration, ready, seek(t) } that scripts/render-frames.ts drives.
+ */
+
+/* ---------- format ---------- */
+const W = 720, H = 720, CX = W / 2, CY = H / 2, FPS = 24;
+const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+
+/* ---------- deterministic randomness ---------- */
+function mulberry32(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const rngFor = (...parts) => mulberry32(hashStr(parts.join('/')));           // one stream per (scene, element)
+function hash2(x, y, seed){ let h = (x * 374761393 + y * 668265263 + seed * 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function valueNoise(x, y, seed){
+  const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash2(x0, y0, seed), b = hash2(x0 + 1, y0, seed), c = hash2(x0, y0 + 1, seed), d = hash2(x0 + 1, y0 + 1, seed);
+  const top = a + (b - a) * sx, bot = c + (d - c) * sx;
+  return top + (bot - top) * sy;
+}
+function fbm(x, y, seed, octaves = 4){ let v = 0, amp = 0.5, f = 1; for (let i = 0; i < octaves; i++){ v += amp * valueNoise(x * f, y * f, seed + i * 101); f *= 2; amp *= 0.5; } return v / (1 - Math.pow(0.5, octaves)); }
+function gauss(rng){ let u = 0, v = 0; while (u === 0) u = rng(); v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.283185 * v); }
+
+/* ---------- easing + time helpers (all pure) ---------- */
+const ease = {
+  linear: p => p,
+  inQuad: p => p * p,
+  outQuad: p => 1 - (1 - p) * (1 - p),
+  inOutQuad: p => p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2,
+  inCubic: p => p * p * p,
+  outCubic: p => 1 - Math.pow(1 - p, 3),
+  inOutCubic: p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2,
+  outQuart: p => 1 - Math.pow(1 - p, 4),
+  inOutSine: p => -(Math.cos(Math.PI * p) - 1) / 2,
+  outExpo: p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p),
+  inOutExpo: p => p <= 0 ? 0 : p >= 1 ? 1 : p < .5 ? Math.pow(2, 20 * p - 10) / 2 : (2 - Math.pow(2, -20 * p + 10)) / 2,
+  inBack: p => { const c1 = 1.70158; return (c1 + 1) * p * p * p - c1 * p * p; },
+  outBack: p => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); },
+};
+/** Damped spring from 0 → 1, closed form (no integration, so it stays a pure function of t). */
+function spring(tSec, freq = 2.2, damping = 0.45){
+  if (tSec <= 0) return 0;
+  const w = 2 * Math.PI * freq, z = damping, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * tSec) * (Math.cos(wd * tSec) + (z * w / wd) * Math.sin(wd * tSec));
+}
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, start, dur) => clamp01((t - start) / dur);                  // 0→1 across a cue
+const stepTime = (t, fps) => Math.floor(t * fps + 1e-6) / fps;               // animate "on twos": stepTime(t, 12)
+const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+/* ---------- canvas helpers ---------- */
+/** Offscreen canvas sized for DPR, transform set so callers draw in CSS px. */
+function makeCanvas(w = W, h = H, scale = DPR){ const c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale); const g = c.getContext('2d'); g.setTransform(scale, 0, 0, scale, 0, 0); return [c, g]; }
+/** Polyline with cumulative lengths, for draw-on / trim-path reveals. */
+function measure(pts){ const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, len, L: len[len.length - 1] }; }
+/** Stroke the part of a measured polyline between fractions a and b of its length. */
+function trimPath(g, m, a, b){
+  const A = clamp01(a) * m.L, B = clamp01(b) * m.L; if (B <= A) return;
+  const at = d => { let i = 1; while (i < m.len.length - 1 && m.len[i] < d) i++; const f = (d - m.len[i - 1]) / ((m.len[i] - m.len[i - 1]) || 1); return [lerp(m.pts[i - 1][0], m.pts[i][0], f), lerp(m.pts[i - 1][1], m.pts[i][1], f), i]; };
+  const [x0, y0, i0] = at(A), [x1, y1, i1] = at(B);
+  g.beginPath(); g.moveTo(x0, y0); for (let i = i0; i < i1; i++) g.lineTo(m.pts[i][0], m.pts[i][1]); g.lineTo(x1, y1); g.stroke();
+}
+
+/* ==== STYLE: paste one styles/*.md example below this line ==== */
+
+const DURATION = 4.0;
+async function setup(){}
+function render(g, t){
+  g.fillStyle = '#F2EDE3'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#2E3192'; g.beginPath(); g.arc(CX, CY, 16 + 120 * ease.outBack(prog(t, 0.5, 0.6)), 0, Math.PI * 2); g.fill();
+}
+
+/* ==== END STYLE ==== */
+
+/* ---------- frame + playback (style-agnostic) ---------- */
+const canvas = document.getElementById('stage');
+canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+const ctx = canvas.getContext('2d');
+function frame(t){
+  t = Math.max(0, Math.min(DURATION, t));
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.imageSmoothingEnabled = true;
+  render(ctx, t);
+}
+let playing = false, tCur = 0, wallAtPlay = 0, tAtPlay = 0, recorder = null;
+const $ = id => document.getElementById(id);
+function ui(){ $('range').value = Math.round(tCur / DURATION * 1000); $('time').textContent = `${tCur.toFixed(3)} / ${DURATION.toFixed(3)}`; $('play').textContent = playing ? 'pause' : 'play'; }
+function seek(t){ playing = false; tCur = Math.max(0, Math.min(DURATION, t)); frame(tCur); ui(); }
+function play(){ if (tCur >= DURATION) tCur = 0; playing = true; wallAtPlay = performance.now(); tAtPlay = tCur; ui(); }
+function loop(now){
+  if (playing){ tCur = tAtPlay + (now - wallAtPlay) / 1000; if (tCur >= DURATION){ tCur = DURATION; playing = false; if (recorder){ recorder.stop(); recorder = null; } } frame(tCur); ui(); }
+  requestAnimationFrame(loop);
+}
+$('play').onclick = () => playing ? (playing = false, ui()) : play();
+$('replay').onclick = () => { seek(0); play(); };
+$('range').oninput = e => seek(e.target.value / 1000 * DURATION);
+$('rec').onclick = () => {
+  if (recorder) return;
+  const stream = canvas.captureStream(FPS), chunks = [];
+  recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 12e6 });
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = 'piece.webm'; a.click(); };
+  seek(0); recorder.start(); play();
+};
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space'){ e.preventDefault(); playing ? (playing = false, ui()) : play(); }
+  else if (e.code === 'ArrowLeft') seek(tCur - 1 / FPS);
+  else if (e.code === 'ArrowRight') seek(tCur + 1 / FPS);
+});
+$('ui').style.width = W + 'px';
+if (typeof ACTS !== 'undefined') for (const [t, label] of ACTS){ const i = document.createElement('i'), b = document.createElement('b'); i.style.left = b.style.left = `${t / DURATION * 100}%`; b.textContent = label; $('marks').append(i, b); }
+
+/* ---------- one-time setup (with a loading bar) + seek contract ---------- */
+const tick = f => new Promise(r => { $('bar').style.width = `${Math.round(f * 100)}%`; requestAnimationFrame(() => r()); });
+const ready = (async () => {
+  await tick(0.02);
+  await setup();
+  await tick(1); $('load').style.display = 'none';
+  const t0 = new URLSearchParams(location.search).get('t');
+  seek(t0 === null ? 0 : Number(t0));
+  requestAnimationFrame(loop);
+})();
+window.__anim = { duration: DURATION, ready, seek };
+</script>
+</body>
+</html>
