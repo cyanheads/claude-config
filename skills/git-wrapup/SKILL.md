@@ -128,9 +128,9 @@ git status               # clean, apart from changes reported as excluded in ste
 git show v<version> --stat | head -20    # tag points at HEAD
 ```
 
-### 7. Update tracked issues, when asked
+### 7. Update tracked issues
 
-Only when the project's flow or the user calls for it: comment on each issue this work addresses with what landed and the commit SHAs, backlinked as needed. Closing an issue stays a separate, deliberate step.
+Comment on each issue this work addresses with what landed and the commit SHAs, backlinked as needed. Closing an issue stays a separate, deliberate step.
 
 ### 8. Push only if the project says so
 
@@ -163,5 +163,5 @@ Push as part of this flow only when the project's own rules say push is the rele
 - [ ] Versioned projects: changelog entry authored in the project's own format (per-version file + regenerated rollup, or a new dated section), version bumped everywhere it's declared (lockfile included when it records it), release commit on top
 - [ ] Annotated tag with a headline-digest message passed via `-F` (if the project tags)
 - [ ] Working tree clean apart from reported exclusions, tag points at HEAD
-- [ ] Issues commented with SHAs only if the flow or the user called for it
+- [ ] Each addressed issue commented with what landed and the commit SHAs
 - [ ] Nothing pushed unless the project's flow or the user called for it; no force-push
