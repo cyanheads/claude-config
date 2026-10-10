@@ -11,7 +11,7 @@ metadata:
 
 ## When to Use
 
-Casey says something like:
+The user says something like:
 - "thread is about to be compacted"
 - "save your context before compaction"
 - "output anything you need to carry over"
@@ -53,13 +53,13 @@ The snapshot is half the job. In the same turn, right after it:
 1. Write anything the snapshot holds that isn't on disk yet into the run's state file, if the run keeps one.
 2. Call `mcp__self-compact__compact` as the turn's last tool call (load it with ToolSearch `select:mcp__self-compact__compact` if it's deferred), then end the turn with no further calls. The compaction runs once the turn ends.
    - **Resume (default).** Set `resume` to the concrete first step after compaction — a command, a file, an issue number (e.g. "Run `bun run devcheck` in ~/Developer/github/foo, then commit the #12 fix"). A vague line like "continue" gets an idle "what next?" reply.
-   - **No resume.** When Casey said not to continue ("don't continue", "just compact", "stop after", "I'll take it from there"), or nothing is left to do, omit `resume`. The thread compacts and waits for his next prompt.
+   - **No resume.** When the user said not to continue ("don't continue", "just compact", "stop after", "I'll take it from there"), or nothing is left to do, omit `resume`. The thread compacts and waits for their next prompt.
    - Pass `instructions` only when the summary needs a specific emphasis; the default already reconciles the snapshot against the conversation.
-3. In a sub-agent, or when the session has no such tool, stop after the snapshot and tell Casey to run `/compact`.
+3. In a sub-agent, or when the session has no such tool, stop after the snapshot and tell the user to run `/compact`.
 
 ## Rules
 
 - **Be specific, not narrative.** Paths, versions, line numbers, command outputs — not summaries of summaries.
 - **Assume the post-compaction context has only the snapshot + CLAUDE.md.** Everything else may be lost or compressed to a sentence.
 - **Don't pad.** If the session was simple and everything is persisted on disk, a 3-line snapshot is fine.
-- **Don't ask what to include, or whether to compact.** Output everything that matters, then compact — Casey triggered this because compaction is due, not to start a conversation about it.
+- **Don't ask what to include, or whether to compact.** Output everything that matters, then compact — the user triggered this because compaction is due, not to start a conversation about it.
