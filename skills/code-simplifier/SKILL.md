@@ -1,6 +1,6 @@
 ---
 name: code-simplifier
-description: Cleanup pass that edits the working tree — over a session's uncommitted changes, or a named path or whole codebase. Reads git diff (or the named target) and simplifies, consolidates, and aligns code with the existing codebase — modernize syntax, cut unnecessary complexity and slop, consolidate duplicated logic, catch efficiency issues. Not a bug hunt: defects are reported, not fixed. Use after a substantive working session, or when asked to clean up, simplify, reduce slop, consolidate, modernize, tighten up, de-slop, or scan a codebase.
+description: Cleanup pass that edits the working tree — over a session's uncommitted changes, or a named path or whole codebase. Reads git diff (or the named target) and simplifies, consolidates, and aligns code with the existing codebase — modernize syntax, cut unnecessary complexity and slop, consolidate duplicated logic, catch efficiency issues. Not a bug hunt; defects are reported, not fixed. Use after a substantive working session, or when asked to clean up, simplify, reduce slop, consolidate, modernize, tighten up, de-slop, or scan a codebase.
 ---
 
 # Code Simplifier
