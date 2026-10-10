@@ -1,6 +1,15 @@
+<div align="center">
+
 # claude-config
 
-My [Claude Code](https://github.com/anthropics/claude-code) setup — settings, system prompt, and skills — installable on any machine with one command. **No GitHub authentication required.**
+A portable [Claude Code](https://github.com/anthropics/claude-code) setup: settings, a system prompt, skills, and mods.<br>
+One command installs it as its own profile. No GitHub login needed.
+
+[![Claude Code](https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://github.com/anthropics/claude-code) [![Bun](https://img.shields.io/badge/Bun-FBF0DF?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh) [![Model Context Protocol](https://img.shields.io/badge/Model_Context_Protocol-1A1A1A?style=for-the-badge)](https://modelcontextprotocol.io)
+
+</div>
+
+## Install
 
 ```sh
 sh -c "$(curl -fsLS https://caseyjhand.com/setup.sh)"
@@ -12,28 +21,71 @@ Or straight from this repo:
 sh -c "$(curl -fsLS https://raw.githubusercontent.com/cyanheads/claude-config/main/install.sh)"
 ```
 
-## What it does
+The installer:
 
-- Installs the Claude Code CLI if it isn't already present (it self-updates afterward).
-- Installs the [Bun](https://bun.sh) runtime if it isn't present — the toolchain these settings and skills assume.
-- Writes `settings.json`, `CLAUDE.md`, and `skills/` into a dedicated **`~/.claude-cyanheads/`** profile — your existing `~/.claude` is never touched — and drops a **`claude-cyanheads`** launcher on your PATH.
-- Registers the **cyanheads** discovery MCP server (`cyanheads.caseyjhand.com/mcp`) in that profile — search the MCP fleet and pull install snippets from inside Claude, no key required.
+1. Installs the Claude Code CLI if it's missing. It updates itself after that.
+2. Installs [Bun](https://bun.sh) if it's missing. The settings and skills assume it.
+3. Writes `settings.json`, `CLAUDE.md`, and `skills/` into a separate profile at `~/.claude-cyanheads/`, backing up any `settings.json` or `CLAUDE.md` already there. Your `~/.claude` is never touched.
+4. Puts a `claude-cyanheads` launcher in `~/.local/bin`, and tells you if that directory isn't on your `PATH`.
+5. Registers the cyanheads discovery MCP server (`cyanheads.caseyjhand.com/mcp`) in the profile, so you can search the cyanheads MCP servers and pull install snippets from inside Claude. No key required.
 
-## What's here
+## Use
 
-| File | What it is |
-|---|---|
-| `settings.json` | Claude Code settings — model, output limits, editor/notification preferences, auto permission mode. |
-| `CLAUDE.md` | Global system prompt: engineering philosophy, response style, code conventions. |
-| `skills/` | General-purpose skills — new-project scaffolding, git wrap-up, code cleanup, context handoff, `gh` workflows, web→Markdown, writing cleanup, npm changelog review, an MCP spec and SDK link index, and procedural Canvas animation exported to MP4. Also two Claude Code mods that load automatically from `skills/`: `context-heads-up` tells each thread when its context passes a share of the model's window, and `self-compact` lets the main thread compact itself at a pause it picks. |
-| `orchestrator/` | A workspace-tier doctrine **template** for running multi-agent (orchestrator → worker) work. Point an agent at `orchestrator/BOOTSTRAP.md` — it internalizes the orchestrator doctrine, resolves your harness's own conventions (which instruction files it loads, where playbooks live), surveys your environment, and rewrites the skeleton filled in. The skeleton ships as `CLAUDE.md`; the bootstrap renames and relocates it to whatever your runtime actually reads. *Not* installed into the config profile (a workspace prompt only takes effect at a workspace/project root). |
+```sh
+claude-cyanheads
+```
 
-## Using it
+This starts Claude Code on the `~/.claude-cyanheads/` profile. Plain `claude` keeps using `~/.claude`.
 
-Run **`claude-cyanheads`** to start Claude Code with this config — an isolated profile in `~/.claude-cyanheads/`. Your plain `claude` keeps using `~/.claude`, untouched.
+- Run `/login` on first launch if prompted. It's a one-time step.
+- Export any API keys or secrets your workflow needs.
+- To make this profile the default for plain `claude` too, add this to your shell rc:
 
-- First launch: run `/login` if prompted (one time).
-- Export any API keys/secrets your workflow needs.
-- Want it everywhere? Add `export CLAUDE_CONFIG_DIR="$HOME/.claude-cyanheads"` to your shell rc and plain `claude` uses it too.
+  ```sh
+  export CLAUDE_CONFIG_DIR="$HOME/.claude-cyanheads"
+  ```
 
-Personal automation hooks and machine-specific config are intentionally left out — this is the portable, shareable core. `CLAUDE.md` is curated on the same principle: private operational sections are dropped, and rules that name my own accounts and repos are written generically here, so they describe your setup rather than mine.
+## What's inside
+
+| Path | Contents |
+|:---|:---|
+| `settings.json` | Claude Code settings: Opus at high effort, raised output and tool-timeout limits, auto permission mode, language-server plugins, and auto-compact turned off (the mods below handle compaction) |
+| `CLAUDE.md` | The global system prompt: engineering principles, response style, code and git conventions |
+| `skills/` | Ten skills and two mods, listed below |
+| `orchestrator/` | A template for orchestrator → worker agent runs. Not installed into the profile; see [Orchestrator template](#orchestrator-template) |
+
+### Skills
+
+| Skill | What it does |
+|:---|:---|
+| `new-project` | Scaffolds a new repo: skeleton, README, CLAUDE.md, changelog, GitHub repo, first push |
+| `git-wrapup` | Lands working-tree changes as a stack of logical commits, versioned and tagged where the project is |
+| `code-simplifier` | Runs a cleanup pass over uncommitted changes or a named path |
+| `compact-prep` | Saves a snapshot of session state before a context compaction, then triggers it |
+| `github-cli` | `gh` workflows for PRs, issues, CI, and releases |
+| `markdown-new` | Fetches a web page as full, clean Markdown instead of a summary |
+| `writing-humanizer` | Strips the tells of AI-generated writing from prose |
+| `changelog` | Reviews npm changelogs across a dependency version range |
+| `modelcontextprotocol` | MCP spec and SDK link index, plus scaffolding a TypeScript server |
+| `procedural-canvas-animation` | Makes code-drawn Canvas animations as one HTML file, exported to MP4 or GIF |
+
+### Mods
+
+Mods are Claude Code plugins that hook into the running session. These two load automatically from `skills/`:
+
+| Mod | What it does |
+|:---|:---|
+| `context-heads-up` | Tells each thread when its context passes a share of the model's window: the main thread to compact at a pause, a sub-agent to wrap up and hand back. Thresholds default to 50, 55, and 60% and are configurable |
+| `self-compact` | Gives the main thread a tool to compact itself at a pause it picks, then resume from a line it wrote or wait for you |
+
+Together they replace auto-compact, so a thread compacts between tasks instead of in the middle of one.
+
+## Orchestrator template
+
+`orchestrator/` holds a workspace doctrine template for multi-agent work, where an orchestrator hands tasks to workers. Point an agent at `orchestrator/BOOTSTRAP.md`. It takes in the doctrine, works out your harness's conventions (which instruction files it loads, where playbooks live), surveys your environment, and fills in the skeleton. The skeleton ships as `CLAUDE.md`, and the bootstrap renames and moves it to whatever your runtime reads.
+
+It isn't installed into the profile, because a workspace prompt only takes effect at a workspace or project root.
+
+## What's left out
+
+Personal automation hooks and machine-specific config stay out. This repo is the portable core. `CLAUDE.md` follows the same rule: private operational sections are removed, and rules that name my own accounts and repos are written generically, so they describe your setup instead of mine.
