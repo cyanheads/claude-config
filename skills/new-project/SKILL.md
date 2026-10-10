@@ -34,7 +34,7 @@ Everything below has a default, so a scaffold rarely needs to stall. Ask **one**
 | Decision | Default |
 |:---|:---|
 | Name | Hyphenated, lowercase, says what it is. Names an agent will re-read benefit from being explicit over short |
-| Location | `~/Developer/github/<name>/` — every repo is a sibling there, no nested roots, no per-category dirs |
+| Location | `<projects-dir>/<name>/`, where `<projects-dir>` is the projects directory the user's instructions name (ask if none does) — every repo is a sibling there, no nested roots, no per-category dirs |
 | Visibility | **Private** unless it is meant to be published or shown off. Client work is always private |
 | License | Apache-2.0 for public, none needed for private |
 | Runtime | Bun + TypeScript. Python → `uv` |
@@ -46,7 +46,7 @@ Everything below has a default, so a scaffold rarely needs to stall. Ask **one**
 Confirm the name is free everywhere it will live before creating anything:
 
 ```bash
-test ! -e ~/Developer/github/<name>     # must succeed — the directory doesn't exist
+test ! -e <projects-dir>/<name>        # must succeed — the directory doesn't exist
 gh repo view <owner>/<name>             # must fail — no repo by that name
 npm view <name> name                    # publishing projects only — must 404
 ```
@@ -54,7 +54,7 @@ npm view <name> name                    # publishing projects only — must 404
 Any hit → stop and pick another name with the user; never scaffold over an existing directory or repo.
 
 ```bash
-mkdir -p ~/Developer/github/<name> && cd ~/Developer/github/<name>
+mkdir -p <projects-dir>/<name> && cd <projects-dir>/<name>
 git init -b main
 ```
 
@@ -168,7 +168,7 @@ A new repo that nothing points at is invisible next session. Same turn: add it w
 ## Checklist
 
 - [ ] Name confirmed free: no local directory, no GitHub repo, no npm package (if publishing)
-- [ ] `~/Developer/github/<name>/`, `git init -b main`
+- [ ] `<projects-dir>/<name>/`, `git init -b main`
 - [ ] Skeleton is modular by domain; no `utils/` catch-all
 - [ ] `package.json` / `pyproject.toml` metadata complete; engines from installed versions; `.gitignore` covers dependencies, build output, `.env`, `.DS_Store`; `.env.example` written
 - [ ] Gate command exists and passes on the empty scaffold
