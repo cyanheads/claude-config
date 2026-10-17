@@ -78,6 +78,7 @@
   "verbose": true,
   "preferredNotifChannel": "ghostty",
   "autoCompactEnabled": false,
+  "idleCompaction": false,
   "switchModelsOnFlag": false,
   "fileCheckpointingEnabled": true,
   "showTurnDuration": true,
