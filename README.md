@@ -26,7 +26,7 @@ The installer:
 1. Installs the Claude Code CLI if it's missing. It updates itself after that.
 2. Installs [Bun](https://bun.sh) if it's missing. The settings and skills assume it.
 3. Writes `settings.json`, `CLAUDE.md`, and `skills/` into a separate profile at `~/.claude-cyanheads/`, backing up any `settings.json` or `CLAUDE.md` already there. Your `~/.claude` is never touched.
-4. Puts a `claude-cyanheads` launcher in `~/.local/bin`, and tells you if that directory isn't on your `PATH`.
+4. Puts a `claude-cyanheads` launcher in `~/.local/bin`, and prints the command to add that directory to your `PATH` if it's missing.
 5. Registers the cyanheads discovery MCP server (`cyanheads.caseyjhand.com/mcp`) in the profile, so you can search the cyanheads MCP servers and pull install snippets from inside Claude. No key required.
 
 ## Use
@@ -39,10 +39,10 @@ This starts Claude Code on the `~/.claude-cyanheads/` profile. Plain `claude` ke
 
 - Run `/login` on first launch if prompted. It's a one-time step.
 - Export any API keys or secrets your workflow needs.
-- To make this profile the default for plain `claude` too, add this to your shell rc:
+- To make this profile the default for plain `claude` too, run the line the installer prints at the end. It appends the export to your shell's startup file so it holds in every new shell. For zsh:
 
   ```sh
-  export CLAUDE_CONFIG_DIR="$HOME/.claude-cyanheads"
+  echo 'export CLAUDE_CONFIG_DIR="$HOME/.claude-cyanheads"' >> ~/.zshrc && source ~/.zshrc
   ```
 
 ## What's inside

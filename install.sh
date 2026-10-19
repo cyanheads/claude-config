@@ -101,13 +101,21 @@ if [ -e "${HOME}/.claude/CLAUDE.md" ] || [ -e "${HOME}/.claude/settings.json" ];
   echo "    note: an existing ~/.claude config was detected and left untouched."
 fi
 
+# --- shell startup file (target of the persist commands printed below) -------
+case "${SHELL:-}" in
+  */zsh)  RC=".zshrc" ;;
+  */bash) if [ "$(uname -s)" = Darwin ]; then RC=".bash_profile"; else RC=".bashrc"; fi ;;
+  */fish) RC=".config/fish/config.fish" ;;
+  *)      RC=".profile" ;;
+esac
+
 # --- PATH check --------------------------------------------------------------
 case ":${PATH}:" in
   *":${BIN_DIR}:"*) ;;
   *)
     echo
-    echo "    NOTE: ${BIN_DIR} is not on your PATH. Add it to your shell rc:"
-    echo "      export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo "    NOTE: ${BIN_DIR} is not on your PATH. Run this once to add it for every shell:"
+    echo "      echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/${RC} && source ~/${RC}"
     ;;
 esac
 
@@ -116,7 +124,7 @@ echo
 echo "==> Done."
 echo "    Launch this config:    claude-cyanheads     # isolated profile"
 echo "    Your normal Claude:    claude               # ~/.claude, untouched"
-echo "    Make it your default:  add to your shell rc →"
-echo "      export CLAUDE_CONFIG_DIR=\"\$HOME/.claude-cyanheads\""
+echo "    Make it your default:  run this once (persists across shells) →"
+echo "      echo 'export CLAUDE_CONFIG_DIR=\"\$HOME/.claude-cyanheads\"' >> ~/${RC} && source ~/${RC}"
 echo
 echo "    First launch: run /login if prompted (one time)."
