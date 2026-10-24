@@ -63,6 +63,7 @@ This starts Claude Code on the `~/.claude-cyanheads/` profile. Plain `claude` ke
 | `code-simplifier` | Runs a cleanup pass over uncommitted changes or a named path |
 | `compact-prep` | Saves a snapshot of session state before a context compaction, then triggers it |
 | `github-cli` | `gh` workflows for PRs, issues, CI, and releases |
+| `vet-agent-filed-issues` | Reviews GitHub issues another agent filed, then rewrites, closes, or splits them before anyone builds from them |
 | `markdown-new` | Fetches a web page as full, clean Markdown instead of a summary |
 | `writing-humanizer` | Strips the tells of AI-generated writing from prose |
 | `changelog` | Reviews npm changelogs across a dependency version range |
