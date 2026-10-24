@@ -1,11 +1,13 @@
 ---
 name: vet-agent-filed-issues
-description: Vet GitHub issues filed by an agent the user doesn't fully trust yet (Codex, a field-test or triage worker, a smaller model) before anyone builds from them. Review each issue against current code, history, and live upstream behavior, then rewrite, close, or split it so the open set is accurate implementation handoffs. Triggers: "Codex wrote these issues", "an agent filed these, I don't trust it yet", "review the open gh issues and find bad approaches", "issues that shouldn't have been opened", "check what the field-test agent filed", or noticing on your own that a batch you're about to implement was filed by an agent nobody has reviewed.
+description: Vet GitHub issues filed by an agent the user doesn't fully trust yet (Codex, a field-test or triage worker, a smaller model) before anyone builds from them. Review each issue against current code, history, and live upstream behavior, then rewrite, close, or split it so the open set is accurate implementation handoffs. Invoke ONLY when the user says an agent filed the issues — "Codex agent filed these", "an agent wrote these issues, I don't trust it yet", "review what the field-test agent filed and find bad approaches / issues that shouldn't have been opened". Never self-invoke on noticing agent-filed issues; a plain "validate these issues" is the project's issue-validation skill alone.
 ---
 
 # Vet agent-filed issues
 
 The filing agent usually gets the **diagnosis** right and the **fix design** wrong. Trust its repro, not its remedy, and give it no deference because it filed under the user's account.
+
+**With a project issue-validation skill:** this skill owns the distrust pass: Phase 1, the verdicts, and the rulings. When the project carries its own issue-validation or reconciliation skill, Phase 2 follows that skill's body format, staging, collision check, and closure rules. The Phase 2 steps below are the fallback, and they add only the ruling-first and reuse-the-reviewers parts. Without such a skill, run both phases as written.
 
 ## Phase 1: review (read-only)
 
