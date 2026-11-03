@@ -44,7 +44,7 @@ Evaluate the changes across these dimensions. Not every dimension applies to eve
 
 #### Code quality
 
-- **Redundant state** — State that duplicates existing state, cached values that could be derived.
+- **Redundant state** — State that duplicates existing state, cached values that could be derived, and a cache added to hide work the code could stop repeating — remove the repetition instead. A cache in front of a cost the code doesn't control (a rate-limited upstream, a network round trip) is not redundant: leave it.
 - **Unnecessary complexity** — Deep nesting that could be guard clauses, premature abstractions, over-engineered solutions to simple problems.
 - **Speculative generality** — Options, parameters, config flags, generic type parameters, and branches that no caller exercises. Flexibility for a hypothetical caller is cost paid now: remove it, and let the first real use add it back. On a published package's public surface it is API — note it instead (see Dead code).
 - **Pass-through layers** — Apply the deletion test to a wrapper, helper, or module: if deleting it and inlining its body makes the complexity vanish, it was a pass-through — inline it. If the same logic would reappear across several callers, it earns its keep. An interface, port, or injected dependency with a single implementation and no test double is a hypothetical seam, not a real one — collapse it until something actually varies across it.
@@ -60,12 +60,12 @@ Evaluate the changes across these dimensions. Not every dimension applies to eve
 
 #### Efficiency
 
-- **Redundant work** — Repeated computations, duplicate file reads, duplicate network/API calls, N+1 query patterns.
+- **Redundant work** — Repeated computations, duplicate file reads, duplicate network/API calls, N+1 query patterns. Setup that comes out the same on every call — a schema, a formatter (`Intl.NumberFormat`), a lookup `Set` built from a constant list — belongs at module scope, not inside a handler or loop. Anything holding per-call state stays put: a client bound to one request's credentials, or a `/g` / `/y` regex, whose `lastIndex` carries from one `.test()` / `.exec()` call into the next.
 - **Missed concurrency** — Independent async operations run sequentially that could run in parallel with `Promise.all` / `Promise.allSettled`.
 - **Unbounded fan-out** — `Promise.all` / `asyncio.gather` over a caller-sized or otherwise unbounded array fires everything at once. Cap it with the project's existing concurrency helper or a batched loop. A fixed handful of independent calls needs no limit.
 - **No-op updates** — State/store updates inside loops or event handlers that fire unconditionally. Add change-detection so downstream consumers aren't notified when nothing changed.
 - **TOCTOU** — Pre-checking file/resource existence before operating on it. Operate directly and handle the error instead.
-- **Overly broad operations** — Reading entire files when only a portion is needed, loading all items when filtering for one.
+- **Overly broad operations** — Reading entire files when only a portion is needed, loading all items when filtering for one, selecting every column (`SELECT *`, a full ORM row) or requesting a full upstream payload when the code reads a few fields.
 
 ### Phase 4: Apply transformations
 
