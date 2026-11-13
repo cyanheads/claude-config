@@ -43,7 +43,9 @@ test('compacts once the turn ends, then submits the resume line', async ($, on) 
   await turnEnds($)
   await clock.settle()
   expect(compacted).toEqual([expect.stringContaining('Compaction Snapshot')])
-  expect(submitted).toEqual(['carry on with step 4'])
+  expect(submitted).toEqual([
+    'carry on with step 4\n\nThis line was written before the compaction. If another turn has run since, check it against where the work stands now and carry on from there.',
+  ])
 })
 
 test('without a resume line, compacts and submits nothing', async ($, on) => {
@@ -57,13 +59,15 @@ test('without a resume line, compacts and submits nothing', async ($, on) => {
   expect(submitted).toEqual([])
 })
 
-test('passes the given instructions through', async ($, on) => {
+test('adds the given instructions to the default', async ($, on) => {
   const { clock, compacted } = engine(on)
   await start($)
   await $.tool.call({ tool: TOOL, resume: 'go', instructions: 'keep the plan' })
   await turnEnds($)
   await clock.settle()
-  expect(compacted).toEqual(['keep the plan'])
+  expect(compacted.length).toBe(1)
+  expect(compacted[0]).toStartWith('If the conversation holds a Compaction Snapshot')
+  expect(compacted[0]).toEndWith('Keep file paths and identifiers exact.\n\nkeep the plan')
 })
 
 test('a refused compaction waits for the next turn to end', async ($, on) => {
@@ -76,7 +80,8 @@ test('a refused compaction waits for the next turn to end', async ($, on) => {
   await turnEnds($)
   await clock.settle()
   expect(compacted.length).toBe(1)
-  expect(submitted).toEqual(['go'])
+  expect(submitted.length).toBe(1)
+  expect(submitted[0]).toStartWith('go\n\n')
 })
 
 test('an interrupted turn cancels it', async ($, on) => {

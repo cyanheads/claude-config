@@ -5,17 +5,23 @@
  * the mod runs the compaction `/compact` runs (`$.session.compact`), then submits the model's
  * resume line as the next prompt; with no resume line, the session waits for the user. A turn that starts before the compaction can (a queued
  * notification, a typed prompt) pushes it to that turn's end; an interrupted turn cancels it.
+ * A prompt that queues while the compaction runs (a sub-agent's report) takes the next turn, and
+ * the resume line follows it.
  */
 import type { EngineInterface, Register } from 'claude-code'
 
 const TOOL = 'compact'
 
-/** Treats the compact-prep snapshot as notes to reconcile against the conversation, not a summary to copy. */
+/**
+ * Sent on every compaction, with the call's own instructions after it: treats a compact-prep
+ * snapshot as notes to reconcile against the conversation, not a summary to copy.
+ */
 const DEFAULT_INSTRUCTIONS =
-  "Treat the Compaction Snapshot as the session's own notes: let it guide the summary, not stand in for it. " +
-  'Keep what the conversation shows matters even where the snapshot left it out. Check the snapshot against ' +
-  'the conversation; where a path, status, or decision in it is wrong or stale, go with the conversation and ' +
-  'name the mismatch in the summary. Keep file paths and identifiers exact.'
+  "If the conversation holds a Compaction Snapshot, treat it as the session's own notes: let it guide the summary, not stand in for it. Keep what the conversation shows matters even where the snapshot left it out. Check the snapshot against the conversation; where a path, status, or decision in it is wrong or stale, go with the conversation and name the mismatch in the summary. Keep file paths and identifiers exact."
+
+/** Follows every resume line, since the line lands a turn late whenever another prompt queued during the compaction. */
+const RESUME_NOTE =
+  'This line was written before the compaction. If another turn has run since, check it against where the work stands now and carry on from there.'
 
 /** Turn ends a scheduled compaction may wait through before it is dropped. */
 const MAX_ATTEMPTS = 3
@@ -38,7 +44,7 @@ async function compact($: EngineInterface, job: Job) {
     const out = await $.session.compact({ instructions: job.instructions })
     if (out.skip !== undefined) return finish($, `skipped (${out.skip})`)
     finish($)
-    if (job.resume) await $.prompt.submit({ text: job.resume })
+    if (job.resume) await $.prompt.submit({ text: `${job.resume}\n\n${RESUME_NOTE}` })
   } catch (error) {
     $.ui.log(`compaction attempt ${job.attempts} refused: ${String(error)}`, { to: 'debug' })
     if (job.attempts >= MAX_ATTEMPTS) return finish($, `gave up after ${job.attempts} tries (${String(error)})`)
@@ -66,7 +72,7 @@ export const register: Register = on => {
           instructions: {
             type: 'string',
             description:
-              'What the summary should keep or stress. Defaults to reconciling the Compaction Snapshot against the conversation.',
+              'Anything more the summary should keep or stress, added to the default, which reconciles the Compaction Snapshot against the conversation. Omit it unless something specific has to survive.',
           },
         },
       },
@@ -79,7 +85,11 @@ export const register: Register = on => {
     const args = e as { resume?: unknown; instructions?: unknown }
     const resume = typeof args.resume === 'string' ? args.resume.trim() : ''
     const instructions = typeof args.instructions === 'string' ? args.instructions.trim() : ''
-    pending = { instructions: instructions || DEFAULT_INSTRUCTIONS, resume: resume || undefined, attempts: 0 }
+    pending = {
+      instructions: instructions ? `${DEFAULT_INSTRUCTIONS}\n\n${instructions}` : DEFAULT_INSTRUCTIONS,
+      resume: resume || undefined,
+      attempts: 0,
+    }
     $.ui.status('self-compact: compacting after this turn')
     const after = resume ? 'the resume line follows as the next prompt' : 'the session then waits for the user'
     return {
