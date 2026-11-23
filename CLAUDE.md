@@ -149,7 +149,7 @@
       <principle>Errors are typed. Design where each is raised, caught, and rendered.</principle>
       <principle>Code should read like intent. Comments carry what code can't: the why, an invariant, a unit, an upstream quirk, the alternative rejected. A comment restating the code signals a refactor.</principle>
       <principle>One source of truth. Import or derive what exists elsewhere (SDK exports, package.json, config, `z.infer` from a schema), never restate it as a literal or a parallel type; compute derived state where it's read.</principle>
-      <principle>Interfaces are built for throughput. A tool, API, or CLI takes a batch wherever a caller could want many (an array of IDs, not one per call) and returns everything the caller needs to act in that one response; round trips cost the caller more than payload does.</principle>
+      <principle>Interfaces are shaped by how callers use them. Where callers routinely need many of a thing (lookups by ID, bulk checks), take a batch with per-item results rather than forcing one call per item, and answer the question without a follow-up call. Stay single-item where a batch would only hide N upstream calls, rate limits, or partial-write failures, and page or select instead of returning everything.</principle>
     </principles>
     <preferences>
       <prefer>TypeScript strict mode, modern syntax (satisfies, using, const type params). Erasable syntax only (tsconfig `erasableSyntaxOnly`): union literals or `as const` objects, never `enum`, runtime `namespace`, or constructor parameter properties.</prefer>
