@@ -50,6 +50,6 @@ If the user asked only for a review, stop here. End with the numbered decisions 
 4. **Publish repo by repo as each lands,** using `publish-body.sh <owner/repo> <issue-dir>`. It re-fetches the issue, stops on a collision or an unexpected author, applies `--body-file`, and verifies the published body matches the draft.
    - **Then:** apply retitles and labels (including `breaking-change` for removals or retypes).
    - **New issues:** file them assigned to the account owner, before any body that refers to them, then fill the `#N` placeholders.
-   - **Closures:** close as not planned, with a 2–3 sentence comment a cold reader can follow. Move any real remaining problem to its own issue rather than rewriting the failed one.
+   - **Closures:** close as not planned, with a 2–3 sentence comment a cold reader can follow; a MERGE closes with `gh issue close <n> --duplicate-of <target>` instead. Move any real remaining problem to its own issue rather than rewriting the failed one.
    - **Comments:** post one "The issue body is now the canonical implementation handoff. Updated: …" comment, only on issues that already had comments.
 5. **Close out.** Clean up any scratch the reviewers left. Record the run wherever the project keeps run logs. Report closures first, then filings, rewrites, the calls you made, and leftovers. No code edits, commits, or releases happen in this skill.
