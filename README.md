@@ -51,7 +51,7 @@ This starts Claude Code on the `~/.claude-cyanheads/` profile. Plain `claude` ke
 |:---|:---|
 | `settings.json` | Claude Code settings: Opus at high effort, raised output and tool-timeout limits, auto permission mode, language-server plugins, and auto-compact turned off (the mods below handle compaction) |
 | `CLAUDE.md` | The global system prompt: engineering principles, response style, code and git conventions |
-| `skills/` | Ten skills and two mods, listed below |
+| `skills/` | Eleven skills and two mods, listed below |
 | `orchestrator/` | A template for orchestrator → worker agent runs. Not installed into the profile; see [Orchestrator template](#orchestrator-template) |
 
 ### Skills
